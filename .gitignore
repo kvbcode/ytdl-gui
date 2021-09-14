@@ -1,0 +1,5 @@
+bundle/**
+target/**
+app.properties
+*.exe
+nbactions.xml
