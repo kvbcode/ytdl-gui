@@ -98,16 +98,6 @@ public class BagCell extends GridBagConstraints{
         return this;
     }
 
-    /**
-     * Fills all the free space of the column upwards
-     * @return
-     */
-    public BagCell fillHeight(){
-        this.gridheight = GridBagConstraints.RELATIVE;
-        return this;
-    }
-
-
     public BagCell fillX(){
         this.fill = GridBagConstraints.HORIZONTAL;
         return this;

@@ -50,6 +50,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.border.EmptyBorder;
 
 /**
  *
@@ -163,14 +164,14 @@ public class MainFrame extends BaseFrameWithProperties{
 
         // Row 3
         root.add(compatibilityCheckBox, BagCell.row(3).alignLeft().width(2));
-        root.add(downloadButton, BagCell.next().fillBoth().fillHeight().endRow() );
+        root.add(downloadButton, BagCell.next().fillBoth().height(2).endRow() );
 
         // Row 4
         root.add(processOutputScrollPane, BagCell.next().fillBoth().weight(1.0, 1.0).endRow() );
 
         // Row 5
         root.add(progressBar, BagCell.next().fillX().endRow() );
-        
+
         pack();
     }
 
