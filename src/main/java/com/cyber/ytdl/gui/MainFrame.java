@@ -50,7 +50,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
-import javax.swing.border.EmptyBorder;
 
 /**
  *
@@ -86,7 +85,7 @@ public class MainFrame extends BaseFrameWithProperties{
 
     // Properties
     protected RunnableProcess proc;
-    protected String outputPath = "";
+    protected String outputPath;
     
     // Defaults
     protected static String defaultQuality = "1080";
@@ -190,12 +189,12 @@ public class MainFrame extends BaseFrameWithProperties{
         });
 
         selectOutputPathButton.addActionListener(e -> {
-            outputPath = chooseOutputPath(outputPath);
+            outputPath = selectOutputPath(outputPath);
             if (!outputPath.isEmpty()) selectOutputPathButton.setText(outputPath);
         });
     }
 
-    protected String chooseOutputPath(String currentPath){
+    protected String selectOutputPath(String currentPath){
         JFileChooser dirChooser = new JFileChooser(currentPath);
         dirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         dirChooser.setDialogTitle("Select path");
@@ -222,6 +221,7 @@ public class MainFrame extends BaseFrameWithProperties{
             proc.destroy();
         }
         downloadButton.setText("Download");
+        progressBar.setValue(0);
         return true;
     }
 
@@ -238,7 +238,7 @@ public class MainFrame extends BaseFrameWithProperties{
         this.setSize( properties.getInt(prefix + ".width", getWidth()),
                       properties.getInt(prefix + ".height", getHeight()) );
 
-        this.outputPath = properties.getProperty(prefix + ".output_path", outputPath);
+        this.outputPath = properties.getProperty(prefix + ".output_path", "");
         this.defaultQuality = properties.getProperty(prefix + ".quality", defaultQuality);
         this.defaultDownloader = properties.getProperty(prefix + ".downloader", defaultDownloader);
         this.defaultCompatMode = properties.getBool( prefix + ".compatibility", false);
@@ -262,7 +262,7 @@ public class MainFrame extends BaseFrameWithProperties{
         progressBar.setValue(0);
     }
 
-    public String buildSelectVideoFormatString(String height, boolean compatibility){
+    public String buildVideoFormatSelectString(String height, boolean compatibility){
         return compatibility
             ? String.format(YTDL_COMPAT_FORMAT_STR, height)
             : String.format(YTDL_FORMAT_STR, height);
@@ -272,11 +272,10 @@ public class MainFrame extends BaseFrameWithProperties{
         if (urlTextField.getText().isEmpty()) return;
 
         downloadButton.setText("Stop");
-        download(
-            urlTextField.getText(),
+        download(urlTextField.getText(),
             downloaderComboBox.getSelectedItem().toString(),
             outputPath,
-            buildSelectVideoFormatString(
+            buildVideoFormatSelectString(
                 qualityComboBox.getSelectedItem().toString(),
                 compatibilityCheckBox.isSelected() )
         );
@@ -288,11 +287,11 @@ public class MainFrame extends BaseFrameWithProperties{
         println(String.format("%s download: %s", downloaderExe, url));
         println("output path: " + outputDir);
 
-        String outputFilesPath = !outputDir.isEmpty()?
-            outputDir + File.separator + YTDL_OUTFILE_FORMAT_STR:
-            YTDL_OUTFILE_FORMAT_STR;
+        String outputFilesPattern = !outputDir.isEmpty()
+            ? outputDir + File.separator + YTDL_OUTFILE_FORMAT_STR
+            : YTDL_OUTFILE_FORMAT_STR;
 
-        proc = new RunnableProcess(downloaderExe, "-f", selectFormatString, "-o", outputFilesPath, url)
+        proc = new RunnableProcess(downloaderExe, "-f", selectFormatString, "-o", outputFilesPattern, url)
             .charset(Charset.forName("cp1251"))
             .onOutput(this::handleOutput)
             .onExit(() -> stopDownloadAction());
@@ -308,7 +307,14 @@ public class MainFrame extends BaseFrameWithProperties{
 
     protected void handleOutput(String line){
         Matcher mat = DOWNLOAD_PROGRESS_PATTERN.matcher(line);
-        if (mat.find()) progressBar.setValue( Float.valueOf(mat.group(1)).intValue() );
+        if (mat.find()){
+            int progressValue = Float.valueOf(mat.group(1)).intValue();
+            int prev = progressBar.getValue();
+            progressBar.setValue( progressValue );
+            // Reduce the output of unnecessary messages
+            if (progressValue>prev && (prev==0 || progressValue%5==0)) println(line);
+            return;
+        }
 
         println(line);
     }
