@@ -25,13 +25,21 @@
 package com.cyber.ytdl.gui;
 
 import com.cyber.util.ApplicationProperties;
+import java.awt.Font;
+import java.awt.Toolkit;
+import java.util.Enumeration;
+import java.util.Map;
+import javax.swing.UIDefaults;
 import javax.swing.UIManager;
+import javax.swing.plaf.FontUIResource;
 
 /**
  *
  * @author Kirill Bereznyakov
  */
 public class Main {
+
+    private static final int BASE_DPI = 96;
 
     public static void main(String[] args) throws Exception{
 
@@ -41,9 +49,30 @@ public class Main {
         // init System LaF
         UIManager.setLookAndFeel( UIManager.getSystemLookAndFeelClassName() );
 
+        // LaF tweaks
+        int dpi = Toolkit.getDefaultToolkit().getScreenResolution();
+        if (dpi!=BASE_DPI) setDefaultFontsScale((float)dpi/BASE_DPI);
+
         MainFrame main = new MainFrame(properties);
         main.showAtCenter();
 
+    }
+
+    public static void setDefaultFontsScale(float scale){
+        UIDefaults defaults = UIManager.getDefaults();
+        Enumeration keys = defaults.keys();
+
+        while (keys.hasMoreElements()) {
+            Object key = keys.nextElement();
+            Object obj = UIManager.get(key);
+            if (obj instanceof FontUIResource) {
+                FontUIResource resource = (FontUIResource) obj;
+                defaults.put(key, new FontUIResource(resource.deriveFont(resource.getSize2D()*scale)));
+            } else if (obj instanceof Font) {
+                Font resource = (Font) obj;
+                defaults.put(key, resource.deriveFont(resource.getSize2D()*scale));
+            }
+        }
     }
 
 }
