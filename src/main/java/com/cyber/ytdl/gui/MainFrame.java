@@ -27,16 +27,12 @@ package com.cyber.ytdl.gui;
 import com.cyber.ui.swing.BagCell;
 import com.cyber.ui.swing.BaseFrameWithProperties;
 import com.cyber.util.ApplicationProperties;
-import com.cyber.util.RunnableProcess;
+import com.cyber.ytdl.VideoDownloader;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagLayout;
 import java.awt.Rectangle;
-import java.io.File;
-import java.nio.charset.Charset;
 import java.util.Arrays;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -57,15 +53,6 @@ import javax.swing.ScrollPaneConstants;
  */
 public class MainFrame extends BaseFrameWithProperties{
 
-    // Const
-    private static final String YTDL_FORMAT_STR = "bestvideo[height<=%1$s]+bestaudio/best[height<=%1$s]";
-    private static final String YTDL_COMPAT_FORMAT_STR = "bestvideo[vcodec^=avc1][height<=%s][fps<=30]+bestaudio[acodec^=mp4a]";
-    private static final String YTDL_OUTFILE_FORMAT_STR = "%(title)s-%(resolution)s.%(ext)s";
-    private static final String[] QUALITY_LIST = {"2160", "1440", "1080", "720", "480", "360"};
-    private static final String[] DOWNLOADER_LIST = {"youtube-dl", "yt-dlp", "yt-dlp_x86"};
-
-    private static final Pattern DOWNLOAD_PROGRESS_PATTERN = Pattern.compile("\\[download\\]\\s+([\\d\\.]+)\\% of ", Pattern.UNICODE_CHARACTER_CLASS);
-
     // UI Components
     protected JLabel urlLabel;
     protected JLabel selectOutputLabel;
@@ -84,7 +71,7 @@ public class MainFrame extends BaseFrameWithProperties{
     protected JScrollPane processOutputScrollPane;
 
     // Properties
-    protected RunnableProcess proc;
+    protected VideoDownloader downloader;
     protected String outputPath;
     
     // Defaults
@@ -114,14 +101,16 @@ public class MainFrame extends BaseFrameWithProperties{
 
     @Override
     public void initComponents(JPanel root) {
-        
+
+        downloader = new VideoDownloader();
+
         ImageIcon icon = new ImageIcon(getClass().getResource("/icon.png"));
         setIconImage(icon.getImage());
 
-        qualityComboBox = new JComboBox<>(QUALITY_LIST);
-        qualityComboBox.setSelectedIndex(Arrays.asList(QUALITY_LIST).indexOf(defaultQuality));
-        downloaderComboBox = new JComboBox(DOWNLOADER_LIST);
-        downloaderComboBox.setSelectedIndex(Arrays.asList(DOWNLOADER_LIST).indexOf(defaultDownloader));
+        qualityComboBox = new JComboBox<>(VideoDownloader.QUALITY_LIST);
+        qualityComboBox.setSelectedIndex(Arrays.asList(VideoDownloader.QUALITY_LIST).indexOf(defaultQuality));
+        downloaderComboBox = new JComboBox(VideoDownloader.DOWNLOADER_LIST);
+        downloaderComboBox.setSelectedIndex(Arrays.asList(VideoDownloader.DOWNLOADER_LIST).indexOf(defaultDownloader));
 
         urlLabel = new JLabel("Enter your youtube link here:");
         urlTextField = new JTextField("");
@@ -139,10 +128,12 @@ public class MainFrame extends BaseFrameWithProperties{
 
         processOutputText = new JTextArea();
         processOutputScrollPane = new JScrollPane(processOutputText);
-        processOutputScrollPane.setPreferredSize(new Dimension(600,500));
+        processOutputScrollPane.setPreferredSize(new Dimension(600,300));
         processOutputScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 
         progressBar = new JProgressBar(0, 100);
+        progressBar.setStringPainted(true);
+        progressBar.setVisible(false);
     }
 
     protected void initLayout(JPanel root){
@@ -166,17 +157,17 @@ public class MainFrame extends BaseFrameWithProperties{
         root.add(downloadButton, BagCell.next().fillBoth().height(2).endRow() );
 
         // Row 4
-        root.add(processOutputScrollPane, BagCell.next().fillBoth().weight(1.0, 1.0).endRow() );
+        root.add(progressBar, BagCell.next().fillX().endRow() );
 
         // Row 5
-        root.add(progressBar, BagCell.next().fillX().endRow() );
+        root.add(processOutputScrollPane, BagCell.next().fillBoth().weight(1.0, 1.0).endRow() );
 
         pack();
     }
 
     protected void bindActions(){
         downloadButton.addActionListener(e -> {
-            if (proc!=null && proc.isAlive()){
+            if (downloader.isAlive()){
                 stopDownloadAction();
             }else{
                 startDownloadAction();
@@ -192,6 +183,12 @@ public class MainFrame extends BaseFrameWithProperties{
             outputPath = selectOutputPath(outputPath);
             if (!outputPath.isEmpty()) selectOutputPathButton.setText(outputPath);
         });
+
+        downloader.onDownloadProgressValue(value -> progressBar.setValue(value.intValue()));
+        downloader.onDownloadProgressString(progressBar::setString);
+
+        downloader.onMessage(this::println);
+        downloader.onExit(this::stopDownloadAction);
     }
 
     protected String selectOutputPath(String currentPath){
@@ -209,8 +206,32 @@ public class MainFrame extends BaseFrameWithProperties{
         return ret;
     }
 
+    protected void prepareProgressUI(){
+        processOutputText.setText("");
+        processOutputScrollPane.scrollRectToVisible(new Rectangle(0,0,0,0));
+        progressBar.setValue(0);
+        progressBar.setString("");
+        progressBar.setVisible(true);
+    }
+
+    protected void startDownloadAction(){
+        if (urlTextField.getText().isEmpty()) return;
+        prepareProgressUI();
+
+        String url = urlTextField.getText();
+        String downloaderExe = downloaderComboBox.getSelectedItem().toString();
+        String quality = qualityComboBox.getSelectedItem().toString();
+        boolean compatibleFormat = compatibilityCheckBox.isSelected();
+
+        println(String.format("%s download: %s", downloaderExe, url));
+        println("output path: " + outputPath);
+
+        downloader.download( url, downloaderExe, outputPath, quality, compatibleFormat);
+        downloadButton.setText("Stop");
+    }
+
     protected boolean stopDownloadAction(){
-        if (proc!=null && proc.isAlive()){
+        if (downloader.isAlive()){
             int result = JOptionPane.showConfirmDialog( this,
                 "Downloading process is not fully completed. Abort anyway?",
                 "Interrupt process",
@@ -218,11 +239,18 @@ public class MainFrame extends BaseFrameWithProperties{
                 JOptionPane.WARNING_MESSAGE);
 
             if (result!=JOptionPane.YES_OPTION) return false;
-            proc.destroy();
+            downloader.destroy();
         }
         downloadButton.setText("Download");
-        progressBar.setValue(0);
+        progressBar.setVisible(false);
         return true;
+    }
+
+
+    public void println(String str){
+        processOutputText.append(str);
+        processOutputText.append("\n");
+        processOutputText.setCaretPosition(processOutputText.getDocument().getLength());
     }
 
     @Override
@@ -255,69 +283,5 @@ public class MainFrame extends BaseFrameWithProperties{
         properties.put(prefix + ".downloader", downloaderComboBox.getSelectedItem());
         properties.put(prefix + ".compatibility", compatibilityCheckBox.isSelected());
     }
-
-    protected void clearOutputText(){
-        processOutputText.setText("");
-        processOutputScrollPane.scrollRectToVisible(new Rectangle(0,0,0,0));
-        progressBar.setValue(0);
-    }
-
-    public String buildVideoFormatSelectString(String height, boolean compatibility){
-        return compatibility
-            ? String.format(YTDL_COMPAT_FORMAT_STR, height)
-            : String.format(YTDL_FORMAT_STR, height);
-    }
-
-    protected void startDownloadAction(){
-        if (urlTextField.getText().isEmpty()) return;
-
-        downloadButton.setText("Stop");
-        download(urlTextField.getText(),
-            downloaderComboBox.getSelectedItem().toString(),
-            outputPath,
-            buildVideoFormatSelectString(
-                qualityComboBox.getSelectedItem().toString(),
-                compatibilityCheckBox.isSelected() )
-        );
-    }
-
-    public void download(String url, String downloaderExe, String outputDir, String selectFormatString){
-        clearOutputText();
-
-        println(String.format("%s download: %s", downloaderExe, url));
-        println("output path: " + outputDir);
-
-        String outputFilesPattern = !outputDir.isEmpty()
-            ? outputDir + File.separator + YTDL_OUTFILE_FORMAT_STR
-            : YTDL_OUTFILE_FORMAT_STR;
-
-        proc = new RunnableProcess(downloaderExe, "-f", selectFormatString, "-o", outputFilesPattern, url)
-            .charset(Charset.forName("cp1251"))
-            .onOutput(this::handleOutput)
-            .onExit(() -> stopDownloadAction());
-
-        new Thread(proc).start();
-    }
-
-    public void println(String str){
-        processOutputText.append(str);
-        processOutputText.append("\n");
-        processOutputText.setCaretPosition(processOutputText.getDocument().getLength());
-    }
-
-    protected void handleOutput(String line){
-        Matcher mat = DOWNLOAD_PROGRESS_PATTERN.matcher(line);
-        if (mat.find()){
-            int progressValue = Float.valueOf(mat.group(1)).intValue();
-            int prev = progressBar.getValue();
-            progressBar.setValue( progressValue );
-            // Reduce the output of unnecessary messages
-            if (progressValue>prev && (prev==0 || progressValue%5==0)) println(line);
-            return;
-        }
-
-        println(line);
-    }
-
 
 }
