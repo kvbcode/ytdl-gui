@@ -32,7 +32,9 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagLayout;
 import java.awt.Rectangle;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -61,8 +63,9 @@ public class MainFrame extends BaseFrameWithProperties{
     protected JTextField urlTextField;
     protected JComboBox<String> qualityComboBox;
     protected JComboBox<String> downloaderComboBox;
+    protected JComboBox<String> outputPathComboBox;
     protected JButton downloadButton;
-    protected JButton selectOutputPathButton;
+    protected JButton browseOutputPathButton;
     protected JCheckBox compatibilityCheckBox;
 
     protected JProgressBar progressBar;
@@ -72,8 +75,10 @@ public class MainFrame extends BaseFrameWithProperties{
 
     // Properties
     protected VideoDownloader downloader;
-    protected String outputPath;
-    
+
+    // Const
+    protected static final int OUTPUT_PATH_LIST_LIMIT = 10;
+
     // Defaults
     protected static String defaultQuality = "1080";
     protected static String defaultDownloader = "youtube-dl";
@@ -85,9 +90,6 @@ public class MainFrame extends BaseFrameWithProperties{
 
     @Override
     protected void configure() {
-        // Properties
-        applyProperties(properties);
-
         // Components
         initComponents(root);
 
@@ -97,6 +99,8 @@ public class MainFrame extends BaseFrameWithProperties{
         // Actions Listeners
         bindActions();
 
+        // Properties
+        applyProperties(properties);
     }
 
     @Override
@@ -108,17 +112,16 @@ public class MainFrame extends BaseFrameWithProperties{
         setIconImage(icon.getImage());
 
         qualityComboBox = new JComboBox<>(VideoDownloader.QUALITY_LIST);
-        qualityComboBox.setSelectedIndex(Arrays.asList(VideoDownloader.QUALITY_LIST).indexOf(defaultQuality));
         downloaderComboBox = new JComboBox<>(VideoDownloader.DOWNLOADER_LIST);
-        downloaderComboBox.setSelectedIndex(Arrays.asList(VideoDownloader.DOWNLOADER_LIST).indexOf(defaultDownloader));
+        outputPathComboBox = new JComboBox<>();
+        outputPathComboBox.setEditable(true);
 
         urlLabel = new JLabel("Enter your youtube link here:");
         urlTextField = new JTextField("");
         selectOutputLabel = new JLabel("Save to: ");
 
         pasteButton = new JButton("Paste");
-        selectOutputPathButton = new JButton("Select output path...");
-        if (outputPath!=null && !outputPath.isEmpty()) selectOutputPathButton.setText(outputPath);
+        browseOutputPathButton = new JButton("Browse...");
         downloadButton = new JButton("Download");
         Font buttonFont = downloadButton.getFont();
         downloadButton.setFont(new Font(buttonFont.getFontName(), Font.BOLD, (int)(buttonFont.getSize()*1.2)));
@@ -145,12 +148,13 @@ public class MainFrame extends BaseFrameWithProperties{
         // Row 1
         root.add(pasteButton, BagCell.next() );
         root.add(urlTextField, BagCell.next().fillX(1.0) );
-        root.add(qualityComboBox, BagCell.next() );
+        root.add(qualityComboBox, BagCell.next().fillX() );
         root.add(downloaderComboBox, BagCell.next().fillX().endRow() );
 
         // Row 2
         root.add(selectOutputLabel, BagCell.next() );
-        root.add(selectOutputPathButton, BagCell.next().fillX() );  // no row end (empty space for downloadButton)
+        root.add(outputPathComboBox, BagCell.next().fillX() );
+        root.add(browseOutputPathButton, BagCell.next().fillX() );  // no row end (empty space for downloadButton)
 
         // Row 3
         root.add(compatibilityCheckBox, BagCell.row(3).alignLeft().width(2));
@@ -179,9 +183,8 @@ public class MainFrame extends BaseFrameWithProperties{
             urlTextField.paste();
         });
 
-        selectOutputPathButton.addActionListener(e -> {
-            outputPath = selectOutputPath(outputPath);
-            if (!outputPath.isEmpty()) selectOutputPathButton.setText(outputPath);
+        browseOutputPathButton.addActionListener(e -> {
+            setOutputPath( browseOutputPath( getOutputPath() ) );
         });
 
         downloader.onDownloadProgressValue(value -> progressBar.setValue(value.intValue()));
@@ -191,7 +194,16 @@ public class MainFrame extends BaseFrameWithProperties{
         downloader.onExit(this::stopDownloadAction);
     }
 
-    protected String selectOutputPath(String currentPath){
+    protected List<String> listComboBox(JComboBox<String> comboBox){
+        int count = comboBox.getItemCount();
+        List<String> list = new ArrayList<>(count);
+        for(int i=0;i<count; i++){
+            list.add(comboBox.getItemAt(i));
+        }
+        return list;
+    }
+
+    protected String browseOutputPath(String currentPath){
         JFileChooser dirChooser = new JFileChooser(currentPath);
         dirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         dirChooser.setDialogTitle("Select path");
@@ -204,6 +216,20 @@ public class MainFrame extends BaseFrameWithProperties{
         }
 
         return ret;
+    }
+
+    protected String getOutputPath(){
+        return (String)outputPathComboBox.getSelectedItem();
+    }
+
+    protected void setOutputPath(String outputPath){
+        if (outputPath==null || outputPath.isEmpty()) return;
+
+        if (listComboBox(outputPathComboBox).contains(outputPath))
+            outputPathComboBox.removeItem(outputPath);
+
+        outputPathComboBox.insertItemAt(outputPath,0);
+        outputPathComboBox.setSelectedItem(outputPath);
     }
 
     protected void prepareProgressUI(){
@@ -224,9 +250,9 @@ public class MainFrame extends BaseFrameWithProperties{
         boolean compatibleFormat = compatibilityCheckBox.isSelected();
 
         println(String.format("%s download: %s", downloaderExe, url));
-        println("output path: " + outputPath);
+        println("output path: " + getOutputPath());
 
-        downloader.download( url, downloaderExe, outputPath, quality, compatibleFormat);
+        downloader.download( url, downloaderExe, getOutputPath(), quality, compatibleFormat);
         downloadButton.setText("Stop");
     }
 
@@ -266,10 +292,17 @@ public class MainFrame extends BaseFrameWithProperties{
         this.setSize( properties.getInt(prefix + ".width", getWidth()),
                       properties.getInt(prefix + ".height", getHeight()) );
 
-        this.outputPath = properties.getProperty(prefix + ".output_path", "");
         defaultQuality = properties.getProperty(prefix + ".quality", defaultQuality);
         defaultDownloader = properties.getProperty(prefix + ".downloader", defaultDownloader);
         defaultCompatMode = properties.getBool( prefix + ".compatibility", false);
+
+        qualityComboBox.setSelectedItem(defaultQuality);
+        downloaderComboBox.setSelectedItem(defaultDownloader);
+
+        outputPathComboBox.setSelectedItem(properties.getProperty(prefix + ".output_path", ""));
+        properties.getStringList(prefix + ".output_path_list")
+            .forEach(str -> outputPathComboBox.addItem(str));
+
     }
 
     @Override
@@ -278,10 +311,17 @@ public class MainFrame extends BaseFrameWithProperties{
 
         properties.put(prefix + ".width", getWidth() );
         properties.put(prefix + ".height", getHeight() );
-        properties.put(prefix + ".output_path", outputPath);
         properties.put(prefix + ".quality", qualityComboBox.getSelectedItem());
         properties.put(prefix + ".downloader", downloaderComboBox.getSelectedItem());
         properties.put(prefix + ".compatibility", compatibilityCheckBox.isSelected());
+
+        properties.put(prefix + ".output_path", outputPathComboBox.getSelectedItem());
+        properties.putStringList(prefix + ".output_path_list", listComboBox(outputPathComboBox)
+            .stream()
+            .limit(OUTPUT_PATH_LIST_LIMIT)
+            .collect(Collectors.toList())
+        );
+
     }
 
 }
