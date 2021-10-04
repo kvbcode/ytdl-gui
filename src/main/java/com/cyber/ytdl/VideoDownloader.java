@@ -44,7 +44,6 @@ public class VideoDownloader {
     private static final String YTDL_COMPAT_FORMAT_STR = "bestvideo[vcodec^=avc1][height<=%s][fps<=30]+bestaudio[acodec^=mp4a]";
     private static final String YTDL_OUTFILE_FORMAT_STR = "%(title)s-%(resolution)s.%(ext)s";
     private static final Pattern DOWNLOAD_PROGRESS_PATTERN = Pattern.compile("\\[download\\]\\s+([\\d\\.]+)\\% of ", Pattern.UNICODE_CHARACTER_CLASS);
-    private static final String CHARSET = "cp1251";
 
     protected RunnableProcess proc;
 
@@ -76,7 +75,7 @@ public class VideoDownloader {
             : YTDL_OUTFILE_FORMAT_STR;
 
         proc = new RunnableProcess(downloaderExe, "-f", selectFormatString, "-o", outputFilesPattern, url)
-            .charset(Charset.forName(CHARSET))
+            .charset(Charset.defaultCharset())
             .onOutput(this::handleOutput)
             .onExit(processExitHandler);
 
