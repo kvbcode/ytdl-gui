@@ -27,7 +27,11 @@ package com.cyber.util;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -35,6 +39,7 @@ import java.util.Properties;
  */
 public class ApplicationProperties extends Properties{
 
+    protected static final String STRINGS_DELIMITER = "###";
     protected final String filePath;
 
     public ApplicationProperties(String filePath) {
@@ -62,6 +67,21 @@ public class ApplicationProperties extends Properties{
     @Override
     public synchronized Object put(Object key, Object value) {
         return super.put(key, String.valueOf(value));
+    }
+
+    public void putStringList(Object key, List<String> stringList){
+        put(key, stringList.stream().collect(Collectors.joining(STRINGS_DELIMITER)) );
+    }
+
+    public List<String> getStringList(String key){
+        List<String> list = new ArrayList<>();
+        String rawString = getProperty(key, "");
+
+        if (!rawString.isEmpty()){
+            list.addAll( Arrays.asList( rawString.split(STRINGS_DELIMITER)) );
+        }
+        
+        return list;
     }
 
     public Integer getInt(Object key, Integer defaultValue){
