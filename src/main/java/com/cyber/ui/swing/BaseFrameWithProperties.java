@@ -42,8 +42,8 @@ public abstract class BaseFrameWithProperties extends BaseFrame{
 
     @Override
     protected void configure() {
-        applyProperties(properties);
         super.configure();
+        applyProperties(properties);
     }
 
     @Override
