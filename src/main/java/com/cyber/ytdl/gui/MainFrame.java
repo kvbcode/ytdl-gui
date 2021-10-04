@@ -109,7 +109,7 @@ public class MainFrame extends BaseFrameWithProperties{
 
         qualityComboBox = new JComboBox<>(VideoDownloader.QUALITY_LIST);
         qualityComboBox.setSelectedIndex(Arrays.asList(VideoDownloader.QUALITY_LIST).indexOf(defaultQuality));
-        downloaderComboBox = new JComboBox(VideoDownloader.DOWNLOADER_LIST);
+        downloaderComboBox = new JComboBox<>(VideoDownloader.DOWNLOADER_LIST);
         downloaderComboBox.setSelectedIndex(Arrays.asList(VideoDownloader.DOWNLOADER_LIST).indexOf(defaultDownloader));
 
         urlLabel = new JLabel("Enter your youtube link here:");
@@ -267,9 +267,9 @@ public class MainFrame extends BaseFrameWithProperties{
                       properties.getInt(prefix + ".height", getHeight()) );
 
         this.outputPath = properties.getProperty(prefix + ".output_path", "");
-        this.defaultQuality = properties.getProperty(prefix + ".quality", defaultQuality);
-        this.defaultDownloader = properties.getProperty(prefix + ".downloader", defaultDownloader);
-        this.defaultCompatMode = properties.getBool( prefix + ".compatibility", false);
+        defaultQuality = properties.getProperty(prefix + ".quality", defaultQuality);
+        defaultDownloader = properties.getProperty(prefix + ".downloader", defaultDownloader);
+        defaultCompatMode = properties.getBool( prefix + ".compatibility", false);
     }
 
     @Override

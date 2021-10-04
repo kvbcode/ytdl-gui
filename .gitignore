@@ -1,5 +1,7 @@
 bundle/**
 target/**
+.idea/**
 app.properties
 *.exe
 nbactions.xml
+*.iml
