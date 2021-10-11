@@ -39,7 +39,7 @@ public class RunnableProcess implements Runnable{
 
     final String[] command;
     Consumer<String> processOutputConsumer;
-    Runnable runnableOnExit;
+    Consumer<Process> onExitProcessHandler;
     Charset charset;
     Process proc;
 
@@ -52,7 +52,7 @@ public class RunnableProcess implements Runnable{
         try {
             proc = new ProcessBuilder(command).start();
 
-            if (runnableOnExit!=null) proc.onExit().thenRun(runnableOnExit);
+            if (onExitProcessHandler!=null) proc.onExit().thenAccept(onExitProcessHandler);
 
             if (processOutputConsumer!=null){
                 try(Scanner sc = new Scanner(proc.getInputStream(), charset)){
@@ -72,8 +72,8 @@ public class RunnableProcess implements Runnable{
         return this;
     }
 
-    public RunnableProcess onExit(Runnable runnableOnExit){
-        this.runnableOnExit = runnableOnExit;
+    public RunnableProcess onExit(Consumer<Process> onExitProcessHandler){
+        this.onExitProcessHandler = onExitProcessHandler;
         return this;
     }
 

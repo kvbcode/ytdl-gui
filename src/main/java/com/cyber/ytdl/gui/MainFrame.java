@@ -167,6 +167,8 @@ public class MainFrame extends BaseFrameWithProperties{
         root.add(processOutputScrollPane, BagCell.next().fillBoth().weight(1.0, 1.0).endRow() );
 
         pack();
+        
+        downloadButton.setMinimumSize(downloadButton.getSize());    // freeze Download button size
     }
 
     protected void bindActions(){
@@ -191,7 +193,15 @@ public class MainFrame extends BaseFrameWithProperties{
         downloader.onDownloadProgressString(progressBar::setString);
 
         downloader.onMessage(this::println);
-        downloader.onExit(this::stopDownloadAction);
+        downloader.onTermination(this::stopDownloadAction);
+        downloader.onComplete(() -> println("SUCCESSFULL COMPLETE"));
+        downloader.onError(() -> JOptionPane.showMessageDialog( this,
+            "<html><h2>Downloading error</h2>"
+            + "An error has occurred. Make sure there is enough disk space.<br>"
+            + "Please try downloading again later or select another subroutine<br>"
+            + "from the dropdown list. For example <i>yt-dlp</i> or <i>yt-dlp_x86</i>.",
+            "Downloading error", JOptionPane.ERROR_MESSAGE)
+        );
     }
 
     protected List<String> listComboBox(JComboBox<String> comboBox){

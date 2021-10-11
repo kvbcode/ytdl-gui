@@ -46,12 +46,15 @@ public class VideoDownloader {
     private static final Pattern DOWNLOAD_PROGRESS_PATTERN = Pattern.compile("\\[download\\]\\s+([\\d\\.]+)\\% of ", Pattern.UNICODE_CHARACTER_CLASS);
 
     protected RunnableProcess proc;
+    protected boolean interrupted = false;
 
     protected Consumer<RunnableProcess> processStartHandler = p -> {};
     protected Consumer<String> processConsoleOutputHandler = line -> {};
     protected Consumer<Float> downloadProgressValueHandler = value -> {};
     protected Consumer<String> downloadProgressStringHandler = str -> {};
-    protected Runnable processExitHandler = () -> {};
+    protected Runnable onCompleteHandler = () ->{};
+    protected Runnable onErrorHandler = () ->{};
+    protected Runnable onTerminationHandler = () ->{};
 
 
     public VideoDownloader(){
@@ -74,10 +77,21 @@ public class VideoDownloader {
             ? outputDir + File.separator + YTDL_OUTFILE_FORMAT_STR
             : YTDL_OUTFILE_FORMAT_STR;
 
+        interrupted = false;
+
         proc = new RunnableProcess(downloaderExe, "-f", selectFormatString, "-o", outputFilesPattern, url)
             .charset(Charset.defaultCharset())
             .onOutput(this::handleOutput)
-            .onExit(processExitHandler);
+            .onExit(p -> {
+                if (!interrupted){
+                    if (p.exitValue()==0){
+                        onCompleteHandler.run();
+                    }else{
+                        onErrorHandler.run();
+                    }
+                }
+                onTerminationHandler.run();
+            });
 
         new Thread(proc).start();
         processStartHandler.accept(proc);
@@ -98,7 +112,10 @@ public class VideoDownloader {
     }
 
     public void destroy(){
-        if (isAlive()) proc.destroy();
+        if (isAlive()){
+            interrupted = true;
+            proc.destroy();
+        }
     }
 
     public void onStart(Consumer<RunnableProcess> processStartHandler){
@@ -117,8 +134,16 @@ public class VideoDownloader {
         this.downloadProgressStringHandler = downloadProgressStringHandler;
     }
 
-    public void onExit(Runnable processExitHandler){
-        this.processExitHandler = processExitHandler;
+    public void onComplete(Runnable onCompleteHandler){
+        this.onCompleteHandler = onCompleteHandler;
+    }
+
+    public void onError(Runnable onErrorHandler){
+        this.onErrorHandler = onErrorHandler;
+    }
+
+    public void onTermination(Runnable onTerminationHandler){
+        this.onTerminationHandler = onTerminationHandler;
     }
 
 }
