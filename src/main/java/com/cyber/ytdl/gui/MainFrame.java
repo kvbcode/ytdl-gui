@@ -127,7 +127,6 @@ public class MainFrame extends BaseFrameWithProperties{
         downloadButton.setFont(new Font(buttonFont.getFontName(), Font.BOLD, (int)(buttonFont.getSize()*1.2)));
 
         compatibilityCheckBox = new JCheckBox("Compatibility mode (avc+aac).mp4");
-        compatibilityCheckBox.setSelected(defaultCompatMode);
 
         processOutputText = new JTextArea();
         processOutputScrollPane = new JScrollPane(processOutputText);
@@ -308,6 +307,7 @@ public class MainFrame extends BaseFrameWithProperties{
 
         qualityComboBox.setSelectedItem(defaultQuality);
         downloaderComboBox.setSelectedItem(defaultDownloader);
+        compatibilityCheckBox.setSelected(defaultCompatMode);
 
         outputPathComboBox.setSelectedItem(properties.getProperty(prefix + ".output_path", ""));
         properties.getStringList(prefix + ".output_path_list")
