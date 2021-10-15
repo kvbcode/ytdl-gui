@@ -26,8 +26,10 @@ package com.cyber.ytdl.gui;
 
 import com.cyber.ui.swing.BagCell;
 import com.cyber.ui.swing.BaseFrameWithProperties;
+import com.cyber.ui.swing.HBox;
 import com.cyber.util.ApplicationProperties;
 import com.cyber.ytdl.VideoDownloader;
+import com.cyber.ytdl.VideoDownloaderCommand;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagLayout;
@@ -67,6 +69,7 @@ public class MainFrame extends BaseFrameWithProperties{
     protected JButton downloadButton;
     protected JButton browseOutputPathButton;
     protected JCheckBox compatibilityCheckBox;
+    protected JCheckBox playlistAllowedCheckBox;
 
     protected JProgressBar progressBar;
 
@@ -83,6 +86,7 @@ public class MainFrame extends BaseFrameWithProperties{
     protected static String defaultQuality = "1080";
     protected static String defaultDownloader = "youtube-dl";
     protected static boolean defaultCompatMode = false;
+    protected static boolean defaultPlaylistMode = true;
 
     public MainFrame(ApplicationProperties properties) {
         super("Youtube Downloader GUI", properties);
@@ -126,7 +130,11 @@ public class MainFrame extends BaseFrameWithProperties{
         Font buttonFont = downloadButton.getFont();
         downloadButton.setFont(new Font(buttonFont.getFontName(), Font.BOLD, (int)(buttonFont.getSize()*1.2)));
 
-        compatibilityCheckBox = new JCheckBox("Compatibility mode (avc+aac).mp4");
+        compatibilityCheckBox = new JCheckBox("Compatibility mode");
+        compatibilityCheckBox.setToolTipText("Set compatibility file format for old devices: (avc+aac).mp4");
+
+        playlistAllowedCheckBox = new JCheckBox("Allow playlist");
+        playlistAllowedCheckBox.setToolTipText("Allow whole playlist downloading mode");
 
         processOutputText = new JTextArea();
         processOutputScrollPane = new JScrollPane(processOutputText);
@@ -156,7 +164,7 @@ public class MainFrame extends BaseFrameWithProperties{
         root.add(browseOutputPathButton, BagCell.next().fillX() );  // no row end (empty space for downloadButton)
 
         // Row 3
-        root.add(compatibilityCheckBox, BagCell.row(3).alignLeft().width(2));
+        root.add(HBox.of(compatibilityCheckBox, playlistAllowedCheckBox), BagCell.row(3).alignLeft().width(3));
         root.add(downloadButton, BagCell.next().fillBoth().height(2).endRow() );
 
         // Row 4
@@ -253,15 +261,17 @@ public class MainFrame extends BaseFrameWithProperties{
         if (urlTextField.getText().isEmpty()) return;
         prepareProgressUI();
 
-        String url = urlTextField.getText();
-        String downloaderExe = downloaderComboBox.getSelectedItem().toString();
-        String quality = qualityComboBox.getSelectedItem().toString();
-        boolean compatibleFormat = compatibilityCheckBox.isSelected();
+        VideoDownloaderCommand vdc = new VideoDownloaderCommand();
+        vdc.setUrl(urlTextField.getText());
+        vdc.setQuality(qualityComboBox.getSelectedItem().toString());
+        vdc.setDownloaderExe(downloaderComboBox.getSelectedItem().toString());
+        vdc.setOutputPath(getOutputPath());
+        vdc.setCompatibleFormat(compatibilityCheckBox.isSelected());
+        vdc.setPlaylistAllowed(playlistAllowedCheckBox.isSelected());
 
-        println(String.format("%s download: %s", downloaderExe, url));
-        println("output path: " + getOutputPath());
+        println(vdc.printInfo());
 
-        downloader.download( url, downloaderExe, getOutputPath(), quality, compatibleFormat);
+        downloader.execute(vdc.toList());
         downloadButton.setText("Stop");
     }
 
@@ -303,11 +313,13 @@ public class MainFrame extends BaseFrameWithProperties{
 
         defaultQuality = properties.getProperty(prefix + ".quality", defaultQuality);
         defaultDownloader = properties.getProperty(prefix + ".downloader", defaultDownloader);
-        defaultCompatMode = properties.getBool( prefix + ".compatibility", false);
+        defaultCompatMode = properties.getBool( prefix + ".compatibility", defaultCompatMode);
+        defaultPlaylistMode = properties.getBool( prefix + ".allow_playlist", defaultPlaylistMode);
 
         qualityComboBox.setSelectedItem(defaultQuality);
         downloaderComboBox.setSelectedItem(defaultDownloader);
         compatibilityCheckBox.setSelected(defaultCompatMode);
+        playlistAllowedCheckBox.setSelected(defaultPlaylistMode);
 
         outputPathComboBox.setSelectedItem(properties.getProperty(prefix + ".output_path", ""));
         properties.getStringList(prefix + ".output_path_list")
@@ -324,6 +336,7 @@ public class MainFrame extends BaseFrameWithProperties{
         properties.put(prefix + ".quality", qualityComboBox.getSelectedItem());
         properties.put(prefix + ".downloader", downloaderComboBox.getSelectedItem());
         properties.put(prefix + ".compatibility", compatibilityCheckBox.isSelected());
+        properties.put(prefix + ".allow_playlist", playlistAllowedCheckBox.isSelected());
 
         properties.put(prefix + ".output_path", outputPathComboBox.getSelectedItem());
         properties.putStringList(prefix + ".output_path_list", listComboBox(outputPathComboBox)
