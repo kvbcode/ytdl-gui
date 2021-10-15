@@ -27,6 +27,8 @@ package com.cyber.ytdl;
 import com.cyber.util.RunnableProcess;
 import java.io.File;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,7 +43,7 @@ public class VideoDownloader {
     public static final String[] DOWNLOADER_LIST = {"youtube-dl", "yt-dlp", "yt-dlp_x86"};
 
     private static final String YTDL_FORMAT_STR = "bestvideo[height<=%1$s]+bestaudio/best[height<=%1$s]";
-    private static final String YTDL_COMPAT_FORMAT_STR = "bestvideo[vcodec^=avc1][height<=%s][fps<=30]+bestaudio[acodec^=mp4a]";
+    private static final String YTDL_COMPAT_FORMAT_STR = "best[vcodec^=avc1][height=%1$s][fps<=30][acodec^=mp4a]/bestvideo[vcodec^=avc1][height<=%s][fps<=30]+bestaudio[acodec^=mp4a]";
     private static final String YTDL_OUTFILE_FORMAT_STR = "%(title)s-%(resolution)s.%(ext)s";
     private static final Pattern DOWNLOAD_PROGRESS_PATTERN = Pattern.compile("\\[download\\]\\s+([\\d\\.]+)\\% of ", Pattern.UNICODE_CHARACTER_CLASS);
 
@@ -61,25 +63,45 @@ public class VideoDownloader {
 
     }
 
-    public String buildVideoFormatSelectString(String height, boolean compatibility){
+    public static String buildVideoFormatSelectString(String height, boolean compatibility){
         return compatibility
             ? String.format(YTDL_COMPAT_FORMAT_STR, height)
             : String.format(YTDL_FORMAT_STR, height);
     }
 
-    public void download(String url, String downloaderExe, String outputDir, String quality, boolean compatibleFormat){
-        download(url, downloaderExe, outputDir, buildVideoFormatSelectString( quality, compatibleFormat ) );
+    public static String getOutputFilesPattern(String outputDir){
+        return outputDir.isEmpty()
+            ? YTDL_OUTFILE_FORMAT_STR
+            : outputDir + File.separator + YTDL_OUTFILE_FORMAT_STR;
     }
 
-    public void download(String url, String downloaderExe, String outputDir, String selectFormatString){
+    /**
+     * Simple downloading method. For more options use {@link VideoDownloaderCommand}
+     * @param url
+     * @param downloaderExe downloader program executable
+     * @param outputDir output path with no slash ending
+     * @param quality video height
+     * @param compatibleFormat force most compatible file format. Usually h264(avc1)+aac(mp4a) in MP4 container
+     */
+    public void download(String url, String downloaderExe, String outputDir, String quality, boolean compatibleFormat){
+        List<String> cmd = new ArrayList<>();
+        cmd.add(downloaderExe);
+        cmd.add("-f");
+        cmd.add( buildVideoFormatSelectString( quality, compatibleFormat ) );
+        cmd.add("-o");
+        cmd.add( getOutputFilesPattern(outputDir) );
+        cmd.add(url);
+        execute( cmd );
+    }
 
-        String outputFilesPattern = !outputDir.isEmpty()
-            ? outputDir + File.separator + YTDL_OUTFILE_FORMAT_STR
-            : YTDL_OUTFILE_FORMAT_STR;
-
+    /**
+     * Execute downloader with parameters. Use {@link VideoDownloaderCommand}
+     * @param commandList command line parts
+     */
+    public void execute(List<String> commandList){
         interrupted = false;
 
-        proc = new RunnableProcess(downloaderExe, "-f", selectFormatString, "-o", outputFilesPattern, url)
+        proc = new RunnableProcess(commandList)
             .charset(Charset.defaultCharset())
             .onOutput(this::handleOutput)
             .onExit(p -> {
