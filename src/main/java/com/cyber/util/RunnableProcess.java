@@ -25,8 +25,8 @@
 package com.cyber.util;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.function.Consumer;
@@ -40,11 +40,15 @@ public class RunnableProcess implements Runnable{
     final String[] command;
     Consumer<String> processOutputConsumer;
     Consumer<Process> onExitProcessHandler;
-    Charset charset;
+    Charset charset = Charset.defaultCharset();
     Process proc;
 
     public RunnableProcess(String...command){
         this.command = command;
+    }
+
+    public RunnableProcess(List<String> commandList){
+        this(commandList.toArray(String[]::new));
     }
 
     @Override
@@ -55,9 +59,13 @@ public class RunnableProcess implements Runnable{
             if (onExitProcessHandler!=null) proc.onExit().thenAccept(onExitProcessHandler);
 
             if (processOutputConsumer!=null){
-                try(Scanner sc = new Scanner(proc.getInputStream(), charset)){
-                    while(proc.isAlive() || sc.hasNextLine()){
-                        processOutputConsumer.accept(sc.nextLine());
+                try(Scanner sc = new Scanner(proc.getInputStream(), charset);
+                    Scanner scerr = new Scanner(proc.getErrorStream(), charset)){
+
+                    // Warning! May block
+                    while(proc.isAlive() || sc.hasNextLine() || scerr.hasNextLine()){
+                        if (sc.hasNextLine()) processOutputConsumer.accept(sc.nextLine());
+                        if (scerr.hasNextLine()) processOutputConsumer.accept(scerr.nextLine());
                     }
                 }catch(NoSuchElementException ex){
                 }
