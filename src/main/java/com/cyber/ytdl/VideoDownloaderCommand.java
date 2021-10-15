@@ -27,6 +27,7 @@ package com.cyber.ytdl;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -66,19 +67,20 @@ public class VideoDownloaderCommand extends LinkedHashMap<String,String>{
         if (debug) cmd.add("-v");
 
         // format selection string
-        putIfAbsent("-f", VideoDownloader.buildVideoFormatSelectString(quality, compatibleFormat));
+        put("-f", VideoDownloader.buildVideoFormatSelectString(quality, compatibleFormat));
         
         // output files pattern (with path)
-        putIfAbsent("-o", VideoDownloader.getOutputFilesPattern(outputPath));
+        put("-o", VideoDownloader.getOutputFilesPattern(outputPath));
 
         if (socketTimeout>0)
-            putIfAbsent("--socket-timeout", String.valueOf(socketTimeout));
+            put("--socket-timeout", String.valueOf(socketTimeout));
 
         if (!playlistAllowed)
-            putIfAbsent("--no-playlist", "");
+            put("--no-playlist", "");
 
         entrySet().stream()
             .flatMap(e -> Stream.of(e.getKey(), e.getValue()))
+            .filter(Predicate.not(String::isEmpty))
             .forEach(cmd::add);
 
         // url at last place
