@@ -24,11 +24,14 @@
 
 package com.cyber.util;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Scanner;
 import java.util.function.Consumer;
 
 /**
@@ -59,20 +62,50 @@ public class RunnableProcess implements Runnable{
             if (onExitProcessHandler!=null) proc.onExit().thenAccept(onExitProcessHandler);
 
             if (processOutputConsumer!=null){
-                try(Scanner sc = new Scanner(proc.getInputStream(), charset);
-                    Scanner scerr = new Scanner(proc.getErrorStream(), charset)){
+                CharBuffer inBuf = CharBuffer.allocate(4*1024);
+                CharBuffer errBuf = CharBuffer.allocate(4*1024);
 
-                    // Warning! May block
-                    while(proc.isAlive() || sc.hasNextLine() || scerr.hasNextLine()){
-                        if (sc.hasNextLine()) processOutputConsumer.accept(sc.nextLine());
-                        if (scerr.hasNextLine()) processOutputConsumer.accept(scerr.nextLine());
+                try(
+                    Reader in = new InputStreamReader(proc.getInputStream());
+                    Reader err = new InputStreamReader(proc.getErrorStream());
+                ){
+                    String line;
+                    while(proc.isAlive()){
+
+                        while((line=readLine(err,errBuf))!=null){
+                            processOutputConsumer.accept(line);
+                        }
+
+                        while((line=readLine(in,inBuf))!=null){
+                            processOutputConsumer.accept(line);
+                        }
+
+                        Thread.onSpinWait();
                     }
                 }catch(NoSuchElementException ex){
+                    System.out.println(ex.getMessage());
                 }
             }
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    protected String readLine(Reader in, CharBuffer buf) throws IOException{
+        String result = null;
+
+        while(in.ready()){
+            char ch = (char)in.read();
+            if (ch=='\r' || ch=='\n'){
+                buf.flip();
+                result = buf.toString().trim();
+                buf.clear();
+                break;
+            }else{
+                buf.put(ch);
+            }
+        }
+        return result;
     }
 
     public RunnableProcess onOutput(Consumer<String> processOutputConsumer){
