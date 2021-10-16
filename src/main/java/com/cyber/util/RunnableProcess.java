@@ -80,9 +80,9 @@ public class RunnableProcess implements Runnable{
                             processOutputConsumer.accept(line);
                         }
 
-                        Thread.onSpinWait();
+                        Thread.sleep(5);
                     }
-                }catch(NoSuchElementException ex){
+                }catch(NoSuchElementException | InterruptedException ex){
                     System.out.println(ex.getMessage());
                 }
             }
