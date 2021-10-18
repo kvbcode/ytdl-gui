@@ -24,14 +24,12 @@
 
 package com.cyber.util;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 
 /**
@@ -66,27 +64,28 @@ public class RunnableProcess implements Runnable{
                 CharBuffer errBuf = CharBuffer.allocate(4*1024);
 
                 try(
-                    Reader in = new InputStreamReader(proc.getInputStream());
-                    Reader err = new InputStreamReader(proc.getErrorStream());
+                    Reader in = new InputStreamReader(proc.getInputStream(), charset);
+                    Reader err = new InputStreamReader(proc.getErrorStream(), charset);
                 ){
                     String line;
                     while(proc.isAlive()){
+                        boolean doSleep = true;
 
                         while((line=readLine(err,errBuf))!=null){
                             processOutputConsumer.accept(line);
+                            doSleep = false;
                         }
 
                         while((line=readLine(in,inBuf))!=null){
                             processOutputConsumer.accept(line);
+                            doSleep = false;
                         }
 
-                        Thread.sleep(5);
+                        if (doSleep) Thread.sleep(1);
                     }
-                }catch(NoSuchElementException | InterruptedException ex){
-                    System.out.println(ex.getMessage());
                 }
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             throw new RuntimeException(ex);
         }
     }
