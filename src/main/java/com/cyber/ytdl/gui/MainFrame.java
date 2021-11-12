@@ -81,6 +81,7 @@ public class MainFrame extends BaseFrameWithProperties{
 
     // Const
     protected static final int OUTPUT_PATH_LIST_LIMIT = 10;
+    protected static final String TITLE = "Youtube Downloader GUI";
 
     // Defaults
     protected static String defaultQuality = "1080";
@@ -89,7 +90,7 @@ public class MainFrame extends BaseFrameWithProperties{
     protected static boolean defaultPlaylistMode = true;
 
     public MainFrame(ApplicationProperties properties) {
-        super("Youtube Downloader GUI", properties);
+        super(TITLE, properties);
     }
 
     @Override
@@ -199,6 +200,8 @@ public class MainFrame extends BaseFrameWithProperties{
         downloader.onDownloadProgressValue(value -> progressBar.setValue(value.intValue()));
         downloader.onDownloadProgressString(progressBar::setString);
 
+        progressBar.addChangeListener(e -> updateProgress());
+
         downloader.onMessage(this::println);
         downloader.onTermination(this::stopDownloadAction);
         downloader.onComplete(() -> println("SUCCESSFULL COMPLETE"));
@@ -249,12 +252,22 @@ public class MainFrame extends BaseFrameWithProperties{
         outputPathComboBox.setSelectedItem(outputPath);
     }
 
+    protected void updateProgress(){
+        if (downloader.isAlive()){
+            progressBar.setVisible(true);
+            setTitle("["+progressBar.getValue()+"%] " + TITLE);
+        }else{
+            progressBar.setVisible(false);
+            setTitle(TITLE);
+        }
+    }
+
     protected void prepareProgressUI(){
         processOutputText.setText("");
         processOutputScrollPane.scrollRectToVisible(new Rectangle(0,0,0,0));
         progressBar.setValue(0);
         progressBar.setString("");
-        progressBar.setVisible(true);
+        updateProgress();
     }
 
     protected void startDownloadAction(){
@@ -287,7 +300,7 @@ public class MainFrame extends BaseFrameWithProperties{
             downloader.destroy();
         }
         downloadButton.setText("Download");
-        progressBar.setVisible(false);
+        updateProgress();
         return true;
     }
 
