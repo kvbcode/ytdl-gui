@@ -78,16 +78,13 @@ public class MainFrame extends BaseFrameWithProperties{
 
     // Properties
     protected VideoDownloader downloader;
+    protected VideoDownloaderCommand defaultTask;
 
     // Const
     protected static final int OUTPUT_PATH_LIST_LIMIT = 10;
     protected static final String TITLE = "Youtube Downloader GUI";
+    protected static final String PROPERTIES_PREFIX = "frame.main";
 
-    // Defaults
-    protected static String defaultQuality = "1080";
-    protected static String defaultDownloader = "youtube-dl";
-    protected static boolean defaultCompatMode = false;
-    protected static boolean defaultPlaylistMode = true;
 
     public MainFrame(ApplicationProperties properties) {
         super(TITLE, properties);
@@ -112,6 +109,7 @@ public class MainFrame extends BaseFrameWithProperties{
     public void initComponents(JPanel root) {
 
         downloader = new VideoDownloader();
+        defaultTask = new VideoDownloaderCommand();
 
         ImageIcon icon = new ImageIcon(getClass().getResource("/icon.png"));
         setIconImage(icon.getImage());
@@ -274,7 +272,7 @@ public class MainFrame extends BaseFrameWithProperties{
         if (urlTextField.getText().isEmpty()) return;
         prepareProgressUI();
 
-        VideoDownloaderCommand vdc = new VideoDownloaderCommand();
+        VideoDownloaderCommand vdc = new VideoDownloaderCommand(defaultTask);
         vdc.setUrl(urlTextField.getText());
         vdc.setQuality(qualityComboBox.getSelectedItem().toString());
         vdc.setDownloaderExe(downloaderComboBox.getSelectedItem().toString());
@@ -319,22 +317,32 @@ public class MainFrame extends BaseFrameWithProperties{
 
     @Override
     protected void applyProperties(ApplicationProperties properties){
-        String prefix = "frame.main";
+        String prefix = PROPERTIES_PREFIX;
 
         this.setSize( properties.getInt(prefix + ".width", getWidth()),
                       properties.getInt(prefix + ".height", getHeight()) );
 
-        defaultQuality = properties.getProperty(prefix + ".quality", defaultQuality);
-        defaultDownloader = properties.getProperty(prefix + ".downloader", defaultDownloader);
-        defaultCompatMode = properties.getBool( prefix + ".compatibility", defaultCompatMode);
-        defaultPlaylistMode = properties.getBool( prefix + ".allow_playlist", defaultPlaylistMode);
+        defaultTask.setDebug( properties.getBool(prefix + ".debug",
+            defaultTask.isDebug()));
+        defaultTask.setQuality( properties.getProperty(prefix + ".quality",
+            defaultTask.getQuality()));
+        defaultTask.setDownloaderExe( properties.getProperty(prefix + ".downloader",
+            defaultTask.getDownloaderExe()));
+        defaultTask.setCompatibleFormat( properties.getBool(prefix + ".compatibility",
+            defaultTask.isCompatibleFormat()));
+        defaultTask.setPlaylistAllowed( properties.getBool(prefix + ".allow_playlist",
+            defaultTask.isPlaylistAllowed()));
+        defaultTask.setOutputPath( properties.getProperty(prefix + ".output_path",
+            defaultTask.getOutputPath()));
+        defaultTask.setFileNamesPattern( properties.getProperty(prefix + ".file_names_pattern",
+            defaultTask.getFileNamesPattern()));
 
-        qualityComboBox.setSelectedItem(defaultQuality);
-        downloaderComboBox.setSelectedItem(defaultDownloader);
-        compatibilityCheckBox.setSelected(defaultCompatMode);
-        playlistAllowedCheckBox.setSelected(defaultPlaylistMode);
+        qualityComboBox.setSelectedItem(defaultTask.getQuality());
+        downloaderComboBox.setSelectedItem(defaultTask.getDownloaderExe());
+        compatibilityCheckBox.setSelected(defaultTask.isCompatibleFormat());
+        playlistAllowedCheckBox.setSelected(defaultTask.isPlaylistAllowed());
+        outputPathComboBox.setSelectedItem(defaultTask.getOutputPath());
 
-        outputPathComboBox.setSelectedItem(properties.getProperty(prefix + ".output_path", ""));
         properties.getStringList(prefix + ".output_path_list")
             .forEach(str -> outputPathComboBox.addItem(str));
 
@@ -342,14 +350,16 @@ public class MainFrame extends BaseFrameWithProperties{
 
     @Override
     protected void storeProperties(ApplicationProperties properties){
-        String prefix = "frame.main";
+        String prefix = PROPERTIES_PREFIX;
 
         properties.put(prefix + ".width", getWidth() );
         properties.put(prefix + ".height", getHeight() );
+        properties.put(prefix + ".debug", defaultTask.isDebug());
         properties.put(prefix + ".quality", qualityComboBox.getSelectedItem());
         properties.put(prefix + ".downloader", downloaderComboBox.getSelectedItem());
         properties.put(prefix + ".compatibility", compatibilityCheckBox.isSelected());
         properties.put(prefix + ".allow_playlist", playlistAllowedCheckBox.isSelected());
+        properties.put(prefix + ".file_names_pattern", defaultTask.getFileNamesPattern());
 
         properties.put(prefix + ".output_path", outputPathComboBox.getSelectedItem());
         properties.putStringList(prefix + ".output_path_list", listComboBox(outputPathComboBox)

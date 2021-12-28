@@ -39,13 +39,13 @@ import java.util.regex.Pattern;
  */
 public class VideoDownloader {
 
-    public static final String[] QUALITY_LIST = {"2160", "1440", "1080", "720", "480", "360"};
-    public static final String[] DOWNLOADER_LIST = {"youtube-dl", "yt-dlp", "yt-dlp_x86"};
+    public static String[] QUALITY_LIST = {"2160", "1440", "1080", "720", "480", "360"};
+    public static String[] DOWNLOADER_LIST = {"youtube-dl", "yt-dlp", "yt-dlp_x86"};
 
-    private static final String YTDL_FORMAT_STR = "bestvideo[height<=%1$s]+bestaudio/best[height<=%1$s]";
-    private static final String YTDL_COMPAT_FORMAT_STR = "best[vcodec^=avc1][height=%1$s][fps<=30][acodec^=mp4a]/bestvideo[vcodec^=avc1][height<=%s][fps<=30]+bestaudio[acodec^=mp4a]";
-    private static final String YTDL_OUTFILE_FORMAT_STR = "%(title)s-%(resolution)s.%(ext)s";
-    private static final Pattern DOWNLOAD_PROGRESS_PATTERN = Pattern.compile("\\[download\\]\\s+([\\d\\.]+)\\% of ", Pattern.UNICODE_CHARACTER_CLASS);
+    public static String YTDL_FORMAT_STR = "bestvideo[height<=%1$s]+bestaudio/best[height<=%1$s]";
+    public static String YTDL_COMPAT_FORMAT_STR = "best[vcodec^=avc1][height=%1$s][fps<=30][acodec^=mp4a]/bestvideo[vcodec^=avc1][height<=%s][fps<=30]+bestaudio[acodec^=mp4a]";
+    public static String YTDL_OUTFILE_FORMAT_STR = "%(title)s - [%(channel)s]-%(resolution)s.%(ext)s";
+    protected static Pattern DOWNLOAD_PROGRESS_PATTERN = Pattern.compile("\\[download\\]\\s+([\\d\\.]+)\\% of ", Pattern.UNICODE_CHARACTER_CLASS);
 
     protected RunnableProcess proc;
     protected boolean interrupted = false;
@@ -69,10 +69,20 @@ public class VideoDownloader {
             : String.format(YTDL_FORMAT_STR, height);
     }
 
-    public static String getOutputFilesPattern(String outputDir){
-        return outputDir.isEmpty()
-            ? YTDL_OUTFILE_FORMAT_STR
-            : outputDir + File.separator + YTDL_OUTFILE_FORMAT_STR;
+    /**
+     * Build output files pattern string. If fileName pattern is empty uses default YTDL_OUTFILE_FORMAT_STR.
+     * @param outputDir is optional, may be null or empty
+     * @param fileNamePattern is optional, may be null or empty
+     * @return
+     */
+    public static String getOutputFilesPattern(String outputDir, String fileNamePattern){
+        if (fileNamePattern==null || fileNamePattern.isEmpty()){
+            fileNamePattern = YTDL_OUTFILE_FORMAT_STR;
+        }
+
+        return (outputDir==null || outputDir.isEmpty())
+            ? fileNamePattern
+            : outputDir + File.separator + fileNamePattern;
     }
 
     /**
@@ -89,7 +99,7 @@ public class VideoDownloader {
         cmd.add("-f");
         cmd.add( buildVideoFormatSelectString( quality, compatibleFormat ) );
         cmd.add("-o");
-        cmd.add( getOutputFilesPattern(outputDir) );
+        cmd.add( getOutputFilesPattern(outputDir, "") );
         cmd.add(url);
         execute( cmd );
     }

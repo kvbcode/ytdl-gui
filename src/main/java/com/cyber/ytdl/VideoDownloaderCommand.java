@@ -27,6 +27,7 @@ package com.cyber.ytdl;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -34,27 +35,47 @@ import java.util.stream.Stream;
  *
  * @author Kirill Bereznyakov
  */
-public class VideoDownloaderCommand extends LinkedHashMap<String,String>{
+public class VideoDownloaderCommand{
 
     private String downloaderExe = "youtube-dl";
     private String url = "";
     private String outputPath = "";
+    private String fileNamesPattern = "";
     private String quality = "1080";
     private boolean compatibleFormat = false;
     private boolean playlistAllowed = true;
     private boolean debug = false;
     private int socketTimeout = 20;
 
+    private LinkedHashMap<String,String> params;
+
     public VideoDownloaderCommand(){
+        params = new LinkedHashMap<>();
     }
 
     public VideoDownloaderCommand(String url){
+        this();
         this.url = url;
     }
 
     public VideoDownloaderCommand(String url, String outputDir){
-        this.url = url;
+        this(url);
         this.outputPath = outputDir;
+    }
+
+    public VideoDownloaderCommand(VideoDownloaderCommand source){
+        this();
+        downloaderExe = source.getDownloaderExe();
+        url = source.getUrl();
+        outputPath = source.getOutputPath();
+        fileNamesPattern = source.getFileNamesPattern();
+        quality = source.getQuality();
+        compatibleFormat = source.isCompatibleFormat();
+        playlistAllowed = source.isPlaylistAllowed();
+        debug = source.isDebug();
+        socketTimeout = source.getSocketTimeout();
+
+        params.putAll(source.getParams());
     }
 
     public List<String> toList(){
@@ -67,18 +88,18 @@ public class VideoDownloaderCommand extends LinkedHashMap<String,String>{
         if (debug) cmd.add("-v");
 
         // format selection string
-        put("-f", VideoDownloader.buildVideoFormatSelectString(quality, compatibleFormat));
+        add("-f", VideoDownloader.buildVideoFormatSelectString(quality, compatibleFormat));
         
         // output files pattern (with path)
-        put("-o", VideoDownloader.getOutputFilesPattern(outputPath));
+        add("-o", VideoDownloader.getOutputFilesPattern(outputPath, fileNamesPattern));
 
         if (socketTimeout>0)
-            put("--socket-timeout", String.valueOf(socketTimeout));
+            add("--socket-timeout", String.valueOf(socketTimeout));
 
         if (!playlistAllowed)
-            put("--no-playlist", "");
+            add("--no-playlist");
 
-        entrySet().stream()
+        params.entrySet().stream()
             .flatMap(e -> Stream.of(e.getKey(), e.getValue()))
             .filter(Predicate.not(String::isEmpty))
             .forEach(cmd::add);
@@ -101,17 +122,30 @@ public class VideoDownloaderCommand extends LinkedHashMap<String,String>{
         if (playlistAllowed) sb.append("playlist allowed: true\n");
 
         if (debug){
-            sb.append("debug mode enabled\n");
+            sb.append("debug mode: enabled\n");
+            sb.append("file names: ").append(fileNamesPattern).append("\n");
             sb.append("cmdline: ").append(toList()).append("\n");
-        };
+        }
 
         return sb.toString();
+    }
+
+    public void add(String name, Object value){
+        params.put(name, String.valueOf(value));
+    }
+
+    public void add(String name){
+        add(name, "");
     }
 
     /*  ===================
         Getters and Setters
         ===================
     */
+
+    public Map<String,String> getParams(){
+        return params;
+    }
 
     public String getDownloaderExe() {
         return downloaderExe;
@@ -135,6 +169,14 @@ public class VideoDownloaderCommand extends LinkedHashMap<String,String>{
 
     public void setOutputPath(String outputPath) {
         this.outputPath = outputPath;
+    }
+
+    public String getFileNamesPattern() {
+        return fileNamesPattern;
+    }
+
+    public void setFileNamesPattern(String fileNamesPattern) {
+        this.fileNamesPattern = fileNamesPattern;
     }
 
     public String getQuality() {
