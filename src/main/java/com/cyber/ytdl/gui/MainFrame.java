@@ -28,6 +28,7 @@ import com.cyber.ui.swing.BagCell;
 import com.cyber.ui.swing.BaseFrameWithProperties;
 import com.cyber.ui.swing.HBox;
 import com.cyber.util.ApplicationProperties;
+import com.cyber.util.RunnableProcess;
 import com.cyber.ytdl.VideoDownloader;
 import com.cyber.ytdl.VideoDownloaderCommand;
 import java.awt.Dimension;
@@ -45,6 +46,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -210,6 +212,24 @@ public class MainFrame extends BaseFrameWithProperties{
             + "from the dropdown list. For example <i>yt-dlp</i> or <i>yt-dlp_x86</i>.",
             "Downloading error", JOptionPane.ERROR_MESSAGE)
         );
+
+        JPopupMenu downloaderComboBoxMenu = new JPopupMenu();
+
+        downloaderComboBoxMenu
+            .add("Update downloader")
+            .addActionListener(e -> updateDownloaderAction());
+        
+        downloaderComboBox.setComponentPopupMenu(downloaderComboBoxMenu);
+
+    }
+
+    public void updateDownloaderAction(){
+        prepareProgressUI();
+        new Thread(
+            new RunnableProcess(downloaderComboBox.getSelectedItem().toString(), "-U")
+                .onOutput(this::println)
+                .onExit(p -> println("EXIT " + p.exitValue()))
+        ).start();
     }
 
     protected List<String> listComboBox(JComboBox<String> comboBox){
