@@ -221,6 +221,21 @@ public class MainFrame extends BaseFrameWithProperties{
         
         downloaderComboBox.setComponentPopupMenu(downloaderComboBoxMenu);
 
+        JPopupMenu urlTextFieldMenu = new JPopupMenu();
+
+        urlTextFieldMenu
+            .add("Cut")
+            .addActionListener(e -> urlTextField.cut());
+
+        urlTextFieldMenu
+            .add("Copy")
+            .addActionListener(e -> urlTextField.copy());
+
+        urlTextFieldMenu
+            .add("Paste")
+            .addActionListener(e -> urlTextField.paste());
+
+        urlTextField.setComponentPopupMenu(urlTextFieldMenu);
     }
 
     public void updateDownloaderAction(){
