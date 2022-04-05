@@ -39,11 +39,8 @@ import java.util.regex.Pattern;
  */
 public class VideoDownloader {
 
-    public static String[] QUALITY_LIST = {"2160", "1440", "1080", "720", "480", "360"};
     public static String[] DOWNLOADER_LIST = {"youtube-dl", "yt-dlp", "yt-dlp_x86"};
 
-    public static String YTDL_FORMAT_STR = "bestvideo[height<=%1$s]+bestaudio/best[height<=%1$s]";
-    public static String YTDL_COMPAT_FORMAT_STR = "best[vcodec^=avc1][height=%1$s][fps<=30][acodec^=mp4a]/bestvideo[vcodec^=avc1][height<=%s][fps<=30]+bestaudio[acodec^=mp4a]";
     public static String YTDL_OUTFILE_FORMAT_STR = "%(title)s - [%(channel)s]-%(resolution)s.%(ext)s";
     protected static Pattern DOWNLOAD_PROGRESS_PATTERN = Pattern.compile("\\[download\\]\\s+([\\d\\.]+)\\% of ", Pattern.UNICODE_CHARACTER_CLASS);
 
@@ -63,12 +60,6 @@ public class VideoDownloader {
 
     }
 
-    public static String buildVideoFormatSelectString(String height, boolean compatibility){
-        return compatibility
-            ? String.format(YTDL_COMPAT_FORMAT_STR, height)
-            : String.format(YTDL_FORMAT_STR, height);
-    }
-
     /**
      * Build output files pattern string. If fileName pattern is empty uses default YTDL_OUTFILE_FORMAT_STR.
      * @param outputDir is optional, may be null or empty
@@ -86,7 +77,7 @@ public class VideoDownloader {
     }
 
     /**
-     * Simple downloading method. For more options use {@link VideoDownloaderCommand}
+     * Simple video downloading method (not audio). For more options use {@link VideoDownloaderCommand}
      * @param url
      * @param downloaderExe downloader program executable
      * @param outputDir output path with no slash ending
@@ -94,10 +85,14 @@ public class VideoDownloader {
      * @param compatibleFormat force most compatible file format. Usually h264(avc1)+aac(mp4a) in MP4 container
      */
     public void download(String url, String downloaderExe, String outputDir, String quality, boolean compatibleFormat){
+        String sourceFormatStr = VideoDownloaderSourceFormat
+            .getByHeight(Integer.parseUnsignedInt(quality))
+            .getFormatString(compatibleFormat);
+
         List<String> cmd = new ArrayList<>();
         cmd.add(downloaderExe);
         cmd.add("-f");
-        cmd.add( buildVideoFormatSelectString( quality, compatibleFormat ) );
+        cmd.add(sourceFormatStr);
         cmd.add("-o");
         cmd.add( getOutputFilesPattern(outputDir, "") );
         cmd.add(url);

@@ -31,6 +31,7 @@ import com.cyber.util.ApplicationProperties;
 import com.cyber.util.RunnableProcess;
 import com.cyber.ytdl.VideoDownloader;
 import com.cyber.ytdl.VideoDownloaderCommand;
+import com.cyber.ytdl.VideoDownloaderSourceFormat;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagLayout;
@@ -65,7 +66,7 @@ public class MainFrame extends BaseFrameWithProperties{
 
     protected JButton pasteButton;
     protected JTextField urlTextField;
-    protected JComboBox<String> qualityComboBox;
+    protected JComboBox<VideoDownloaderSourceFormat> qualityComboBox;
     protected JComboBox<String> downloaderComboBox;
     protected JComboBox<String> outputPathComboBox;
     protected JButton downloadButton;
@@ -116,7 +117,7 @@ public class MainFrame extends BaseFrameWithProperties{
         ImageIcon icon = new ImageIcon(getClass().getResource("/icon.png"));
         setIconImage(icon.getImage());
 
-        qualityComboBox = new JComboBox<>(VideoDownloader.QUALITY_LIST);
+        qualityComboBox = new JComboBox<>(VideoDownloaderSourceFormat.values());
         downloaderComboBox = new JComboBox<>(VideoDownloader.DOWNLOADER_LIST);
         outputPathComboBox = new JComboBox<>();
         outputPathComboBox.setEditable(true);
@@ -309,7 +310,7 @@ public class MainFrame extends BaseFrameWithProperties{
 
         VideoDownloaderCommand vdc = new VideoDownloaderCommand(defaultTask);
         vdc.setUrl(urlTextField.getText());
-        vdc.setQuality(qualityComboBox.getSelectedItem().toString());
+        vdc.setSourceFormat((VideoDownloaderSourceFormat)qualityComboBox.getSelectedItem());
         vdc.setDownloaderExe(downloaderComboBox.getSelectedItem().toString());
         vdc.setOutputPath(getOutputPath());
         vdc.setCompatibleFormat(compatibilityCheckBox.isSelected());
@@ -372,7 +373,7 @@ public class MainFrame extends BaseFrameWithProperties{
         defaultTask.setFileNamesPattern( properties.getProperty(prefix + ".file_names_pattern",
             defaultTask.getFileNamesPattern()));
 
-        qualityComboBox.setSelectedItem(defaultTask.getQuality());
+        qualityComboBox.setSelectedItem(defaultTask.getSourceFormat());
         downloaderComboBox.setSelectedItem(defaultTask.getDownloaderExe());
         compatibilityCheckBox.setSelected(defaultTask.isCompatibleFormat());
         playlistAllowedCheckBox.setSelected(defaultTask.isPlaylistAllowed());
