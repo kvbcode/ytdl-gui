@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -44,6 +45,7 @@ public class VideoDownloaderCommand{
     private VideoDownloaderSourceFormat sourceFormat = VideoDownloaderSourceFormat.VIDEO_1080;
     private boolean compatibleFormat = false;
     private boolean playlistAllowed = true;
+    private boolean subtitlesAllowed = false;
     private boolean debug = false;
     private int socketTimeout = 20;
 
@@ -101,8 +103,17 @@ public class VideoDownloaderCommand{
         if (socketTimeout>0)
             add("--socket-timeout", String.valueOf(socketTimeout));
 
-        if (!playlistAllowed)
+        if (playlistAllowed){
+            add("--download-archive",
+                VideoDownloader.getOutputFilesPattern(outputPath, genDownloadArchiveFilename(url)));
+        }else{
             add("--no-playlist");
+        }
+
+        // get all subtitles
+        if (subtitlesAllowed){
+            add("--all-subs");
+        }
 
         params.entrySet().stream()
             .flatMap(e -> Stream.of(e.getKey(), e.getValue()))
@@ -237,6 +248,17 @@ public class VideoDownloaderCommand{
         this.debug = debug;
     }
 
+    public boolean isSubtitlesAllowed() {
+        return subtitlesAllowed;
+    }
+
+    public void setSubtitlesAllowed(boolean subtitlesAllowed) {
+        this.subtitlesAllowed = subtitlesAllowed;
+    }
+
+    protected String genDownloadArchiveFilename(String archiveId) {
+        return "files-" + Integer.toHexString(Objects.hash(archiveId)) + ".lst";
+    }
 
 
 }
