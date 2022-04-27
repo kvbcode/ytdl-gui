@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -41,9 +42,10 @@ public class VideoDownloaderCommand{
     private String url = "";
     private String outputPath = "";
     private String fileNamesPattern = "";
-    private String quality = "1080";
+    private VideoDownloaderSourceFormat sourceFormat = VideoDownloaderSourceFormat.VIDEO_1080;
     private boolean compatibleFormat = false;
     private boolean playlistAllowed = true;
+    private boolean subtitlesAllowed = false;
     private boolean debug = false;
     private int socketTimeout = 20;
 
@@ -69,7 +71,7 @@ public class VideoDownloaderCommand{
         url = source.getUrl();
         outputPath = source.getOutputPath();
         fileNamesPattern = source.getFileNamesPattern();
-        quality = source.getQuality();
+        sourceFormat = source.getSourceFormat();
         compatibleFormat = source.isCompatibleFormat();
         playlistAllowed = source.isPlaylistAllowed();
         debug = source.isDebug();
@@ -87,8 +89,13 @@ public class VideoDownloaderCommand{
         // debug verbosity
         if (debug) cmd.add("-v");
 
-        // format selection string
-        add("-f", VideoDownloader.buildVideoFormatSelectString(quality, compatibleFormat));
+        // audio only params
+        if (!sourceFormat.hasVideo()){
+            cmd.add("-x");
+        }
+
+        // get source format selection string
+        add("-f", sourceFormat.getFormatString(compatibleFormat));
         
         // output files pattern (with path)
         add("-o", VideoDownloader.getOutputFilesPattern(outputPath, fileNamesPattern));
@@ -96,8 +103,17 @@ public class VideoDownloaderCommand{
         if (socketTimeout>0)
             add("--socket-timeout", String.valueOf(socketTimeout));
 
-        if (!playlistAllowed)
+        if (playlistAllowed){
+            add("--download-archive",
+                VideoDownloader.getOutputFilesPattern(outputPath, genDownloadArchiveFilename(url)));
+        }else{
             add("--no-playlist");
+        }
+
+        // get all subtitles
+        if (subtitlesAllowed){
+            add("--all-subs");
+        }
 
         params.entrySet().stream()
             .flatMap(e -> Stream.of(e.getKey(), e.getValue()))
@@ -114,7 +130,7 @@ public class VideoDownloaderCommand{
         StringBuilder sb = new StringBuilder();
 
         sb  .append("url: ").append(url).append("\n")
-            .append("quality: ").append(quality).append("\n")
+            .append("source format: ").append(sourceFormat).append("\n")
             .append("downloader: ").append(downloaderExe).append("\n")
             .append("output path: ").append(outputPath).append("\n");
 
@@ -145,6 +161,19 @@ public class VideoDownloaderCommand{
 
     public Map<String,String> getParams(){
         return params;
+    }
+
+    public String getQuality(){
+        return sourceFormat.toString();
+    }
+
+    /**
+     * Select sourceFormat by quality string.
+     * @param qualityStr sourceFormat title
+     * @see VideoDownloaderSourceFormat#getByTitle(java.lang.String)
+     */
+    public void setQuality(String qualityStr){
+        this.sourceFormat = VideoDownloaderSourceFormat.getByTitle(qualityStr);
     }
 
     public String getDownloaderExe() {
@@ -179,12 +208,12 @@ public class VideoDownloaderCommand{
         this.fileNamesPattern = fileNamesPattern;
     }
 
-    public String getQuality() {
-        return quality;
+    public VideoDownloaderSourceFormat getSourceFormat() {
+        return sourceFormat;
     }
 
-    public void setQuality(String quality) {
-        this.quality = quality;
+    public void setSourceFormat(VideoDownloaderSourceFormat sourceFormat) {
+        this.sourceFormat = sourceFormat;
     }
 
     public boolean isCompatibleFormat() {
@@ -219,6 +248,17 @@ public class VideoDownloaderCommand{
         this.debug = debug;
     }
 
+    public boolean isSubtitlesAllowed() {
+        return subtitlesAllowed;
+    }
+
+    public void setSubtitlesAllowed(boolean subtitlesAllowed) {
+        this.subtitlesAllowed = subtitlesAllowed;
+    }
+
+    protected String genDownloadArchiveFilename(String archiveId) {
+        return "files-" + Integer.toHexString(Objects.hash(archiveId)) + ".lst";
+    }
 
 
 }

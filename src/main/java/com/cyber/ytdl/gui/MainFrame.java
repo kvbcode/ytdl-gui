@@ -31,6 +31,7 @@ import com.cyber.util.ApplicationProperties;
 import com.cyber.util.RunnableProcess;
 import com.cyber.ytdl.VideoDownloader;
 import com.cyber.ytdl.VideoDownloaderCommand;
+import com.cyber.ytdl.VideoDownloaderSourceFormat;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagLayout;
@@ -65,13 +66,14 @@ public class MainFrame extends BaseFrameWithProperties{
 
     protected JButton pasteButton;
     protected JTextField urlTextField;
-    protected JComboBox<String> qualityComboBox;
+    protected JComboBox<VideoDownloaderSourceFormat> qualityComboBox;
     protected JComboBox<String> downloaderComboBox;
     protected JComboBox<String> outputPathComboBox;
     protected JButton downloadButton;
     protected JButton browseOutputPathButton;
     protected JCheckBox compatibilityCheckBox;
     protected JCheckBox playlistAllowedCheckBox;
+    protected JCheckBox subtitlesAllowedCheckBox;
 
     protected JProgressBar progressBar;
 
@@ -116,7 +118,7 @@ public class MainFrame extends BaseFrameWithProperties{
         ImageIcon icon = new ImageIcon(getClass().getResource("/icon.png"));
         setIconImage(icon.getImage());
 
-        qualityComboBox = new JComboBox<>(VideoDownloader.QUALITY_LIST);
+        qualityComboBox = new JComboBox<>(VideoDownloaderSourceFormat.values());
         downloaderComboBox = new JComboBox<>(VideoDownloader.DOWNLOADER_LIST);
         outputPathComboBox = new JComboBox<>();
         outputPathComboBox.setEditable(true);
@@ -136,6 +138,9 @@ public class MainFrame extends BaseFrameWithProperties{
 
         playlistAllowedCheckBox = new JCheckBox("Allow playlist");
         playlistAllowedCheckBox.setToolTipText("Allow whole playlist downloading mode");
+
+        subtitlesAllowedCheckBox = new JCheckBox("Subtitles");
+        subtitlesAllowedCheckBox.setToolTipText("Download all subtitles if possible");
 
         processOutputText = new JTextArea();
         processOutputScrollPane = new JScrollPane(processOutputText);
@@ -165,7 +170,9 @@ public class MainFrame extends BaseFrameWithProperties{
         root.add(browseOutputPathButton, BagCell.next().fillX() );  // no row end (empty space for downloadButton)
 
         // Row 3
-        root.add(HBox.of(compatibilityCheckBox, playlistAllowedCheckBox), BagCell.row(3).alignLeft().width(3));
+        root.add(HBox.of(compatibilityCheckBox, playlistAllowedCheckBox, subtitlesAllowedCheckBox),
+            BagCell.row(3).alignLeft().width(3));
+
         root.add(downloadButton, BagCell.next().fillBoth().height(2).endRow() );
 
         // Row 4
@@ -221,6 +228,21 @@ public class MainFrame extends BaseFrameWithProperties{
         
         downloaderComboBox.setComponentPopupMenu(downloaderComboBoxMenu);
 
+        JPopupMenu urlTextFieldMenu = new JPopupMenu();
+
+        urlTextFieldMenu
+            .add("Cut")
+            .addActionListener(e -> urlTextField.cut());
+
+        urlTextFieldMenu
+            .add("Copy")
+            .addActionListener(e -> urlTextField.copy());
+
+        urlTextFieldMenu
+            .add("Paste")
+            .addActionListener(e -> urlTextField.paste());
+
+        urlTextField.setComponentPopupMenu(urlTextFieldMenu);
     }
 
     public void updateDownloaderAction(){
@@ -294,11 +316,12 @@ public class MainFrame extends BaseFrameWithProperties{
 
         VideoDownloaderCommand vdc = new VideoDownloaderCommand(defaultTask);
         vdc.setUrl(urlTextField.getText());
-        vdc.setQuality(qualityComboBox.getSelectedItem().toString());
+        vdc.setSourceFormat((VideoDownloaderSourceFormat)qualityComboBox.getSelectedItem());
         vdc.setDownloaderExe(downloaderComboBox.getSelectedItem().toString());
         vdc.setOutputPath(getOutputPath());
         vdc.setCompatibleFormat(compatibilityCheckBox.isSelected());
         vdc.setPlaylistAllowed(playlistAllowedCheckBox.isSelected());
+        vdc.setSubtitlesAllowed(subtitlesAllowedCheckBox.isSelected());
 
         println(vdc.printInfo());
 
@@ -352,15 +375,18 @@ public class MainFrame extends BaseFrameWithProperties{
             defaultTask.isCompatibleFormat()));
         defaultTask.setPlaylistAllowed( properties.getBool(prefix + ".allow_playlist",
             defaultTask.isPlaylistAllowed()));
+        defaultTask.setSubtitlesAllowed( properties.getBool(prefix + ".allow_subtitles",
+            defaultTask.isSubtitlesAllowed()));
         defaultTask.setOutputPath( properties.getProperty(prefix + ".output_path",
             defaultTask.getOutputPath()));
         defaultTask.setFileNamesPattern( properties.getProperty(prefix + ".file_names_pattern",
             defaultTask.getFileNamesPattern()));
 
-        qualityComboBox.setSelectedItem(defaultTask.getQuality());
+        qualityComboBox.setSelectedItem(defaultTask.getSourceFormat());
         downloaderComboBox.setSelectedItem(defaultTask.getDownloaderExe());
         compatibilityCheckBox.setSelected(defaultTask.isCompatibleFormat());
         playlistAllowedCheckBox.setSelected(defaultTask.isPlaylistAllowed());
+        subtitlesAllowedCheckBox.setSelected(defaultTask.isSubtitlesAllowed());
         outputPathComboBox.setSelectedItem(defaultTask.getOutputPath());
 
         properties.getStringList(prefix + ".output_path_list")
@@ -379,6 +405,7 @@ public class MainFrame extends BaseFrameWithProperties{
         properties.put(prefix + ".downloader", downloaderComboBox.getSelectedItem());
         properties.put(prefix + ".compatibility", compatibilityCheckBox.isSelected());
         properties.put(prefix + ".allow_playlist", playlistAllowedCheckBox.isSelected());
+        properties.put(prefix + ".allow_subtitles", subtitlesAllowedCheckBox.isSelected());
         properties.put(prefix + ".file_names_pattern", defaultTask.getFileNamesPattern());
 
         properties.put(prefix + ".output_path", outputPathComboBox.getSelectedItem());
