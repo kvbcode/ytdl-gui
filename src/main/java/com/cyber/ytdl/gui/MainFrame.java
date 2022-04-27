@@ -73,6 +73,7 @@ public class MainFrame extends BaseFrameWithProperties{
     protected JButton browseOutputPathButton;
     protected JCheckBox compatibilityCheckBox;
     protected JCheckBox playlistAllowedCheckBox;
+    protected JCheckBox subtitlesAllowedCheckBox;
 
     protected JProgressBar progressBar;
 
@@ -138,6 +139,9 @@ public class MainFrame extends BaseFrameWithProperties{
         playlistAllowedCheckBox = new JCheckBox("Allow playlist");
         playlistAllowedCheckBox.setToolTipText("Allow whole playlist downloading mode");
 
+        subtitlesAllowedCheckBox = new JCheckBox("Subtitles");
+        subtitlesAllowedCheckBox.setToolTipText("Download all subtitles if possible");
+
         processOutputText = new JTextArea();
         processOutputScrollPane = new JScrollPane(processOutputText);
         processOutputScrollPane.setPreferredSize(new Dimension(600,300));
@@ -166,7 +170,9 @@ public class MainFrame extends BaseFrameWithProperties{
         root.add(browseOutputPathButton, BagCell.next().fillX() );  // no row end (empty space for downloadButton)
 
         // Row 3
-        root.add(HBox.of(compatibilityCheckBox, playlistAllowedCheckBox), BagCell.row(3).alignLeft().width(3));
+        root.add(HBox.of(compatibilityCheckBox, playlistAllowedCheckBox, subtitlesAllowedCheckBox),
+            BagCell.row(3).alignLeft().width(3));
+
         root.add(downloadButton, BagCell.next().fillBoth().height(2).endRow() );
 
         // Row 4
@@ -315,6 +321,7 @@ public class MainFrame extends BaseFrameWithProperties{
         vdc.setOutputPath(getOutputPath());
         vdc.setCompatibleFormat(compatibilityCheckBox.isSelected());
         vdc.setPlaylistAllowed(playlistAllowedCheckBox.isSelected());
+        vdc.setSubtitlesAllowed(subtitlesAllowedCheckBox.isSelected());
 
         println(vdc.printInfo());
 
@@ -368,6 +375,8 @@ public class MainFrame extends BaseFrameWithProperties{
             defaultTask.isCompatibleFormat()));
         defaultTask.setPlaylistAllowed( properties.getBool(prefix + ".allow_playlist",
             defaultTask.isPlaylistAllowed()));
+        defaultTask.setSubtitlesAllowed( properties.getBool(prefix + ".allow_subtitles",
+            defaultTask.isSubtitlesAllowed()));
         defaultTask.setOutputPath( properties.getProperty(prefix + ".output_path",
             defaultTask.getOutputPath()));
         defaultTask.setFileNamesPattern( properties.getProperty(prefix + ".file_names_pattern",
@@ -377,6 +386,7 @@ public class MainFrame extends BaseFrameWithProperties{
         downloaderComboBox.setSelectedItem(defaultTask.getDownloaderExe());
         compatibilityCheckBox.setSelected(defaultTask.isCompatibleFormat());
         playlistAllowedCheckBox.setSelected(defaultTask.isPlaylistAllowed());
+        subtitlesAllowedCheckBox.setSelected(defaultTask.isSubtitlesAllowed());
         outputPathComboBox.setSelectedItem(defaultTask.getOutputPath());
 
         properties.getStringList(prefix + ".output_path_list")
@@ -395,6 +405,7 @@ public class MainFrame extends BaseFrameWithProperties{
         properties.put(prefix + ".downloader", downloaderComboBox.getSelectedItem());
         properties.put(prefix + ".compatibility", compatibilityCheckBox.isSelected());
         properties.put(prefix + ".allow_playlist", playlistAllowedCheckBox.isSelected());
+        properties.put(prefix + ".allow_subtitles", subtitlesAllowedCheckBox.isSelected());
         properties.put(prefix + ".file_names_pattern", defaultTask.getFileNamesPattern());
 
         properties.put(prefix + ".output_path", outputPathComboBox.getSelectedItem());
