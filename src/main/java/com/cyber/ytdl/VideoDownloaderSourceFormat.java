@@ -29,7 +29,9 @@ import java.util.stream.Stream;
  *
  * @author Kirill Bereznyakov
  */
-public enum VideoDownloaderSourceFormat {   
+public enum VideoDownloaderSourceFormat {
+    BEST("best", Short.MAX_VALUE),
+    VIDEO_4320("4320", 2160),
     VIDEO_2160("2160", 2160),
     VIDEO_1440("1440", 1440),
     VIDEO_1080("1080", 1080),
@@ -65,14 +67,16 @@ public enum VideoDownloaderSourceFormat {
         for(VideoDownloaderSourceFormat e: values()){
             if (e.title.equals(title)) return e;
         }
-        throw new RuntimeException("'" + title + "' not found");
+        System.err.println("format '" + title + "' is not found.");
+        return BEST;
     }
 
     public static VideoDownloaderSourceFormat getByHeight(int height){
         for(VideoDownloaderSourceFormat e: values()){
             if (e.height==height) return e;
         }
-        throw new RuntimeException("height " + height + " not found");
+        System.err.println("format height " + height + " is not found");
+        return BEST;
     }
 
     public static String[] getTitles(){

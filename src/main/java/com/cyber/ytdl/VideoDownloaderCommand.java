@@ -38,13 +38,13 @@ import java.util.stream.Stream;
  */
 public class VideoDownloaderCommand{
 
-    private String downloaderExe = "youtube-dl";
+    private String downloaderExe = "yt-dlp";
     private String url = "";
     private String outputPath = "";
     private String fileNamesPattern = "";
-    private VideoDownloaderSourceFormat sourceFormat = VideoDownloaderSourceFormat.VIDEO_1080;
+    private VideoDownloaderSourceFormat sourceFormat = VideoDownloaderSourceFormat.BEST;
     private boolean compatibleFormat = false;
-    private boolean playlistAllowed = true;
+    private boolean playlistAllowed = false;
     private boolean subtitlesAllowed = false;
     private boolean debug = false;
     private int socketTimeout = 20;
