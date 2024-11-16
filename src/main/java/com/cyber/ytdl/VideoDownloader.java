@@ -25,10 +25,12 @@
 package com.cyber.ytdl;
 
 import com.cyber.util.RunnableProcess;
+
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,22 +41,22 @@ import java.util.regex.Pattern;
  */
 public class VideoDownloader {
 
-    public static String[] DOWNLOADER_LIST = {"youtube-dl", "yt-dlp", "yt-dlp_x86"};
+    public static String[] DOWNLOADER_LIST = {"yt-dlp", "yt-dlp_x86"};
 
     public static String YTDL_OUTFILE_FORMAT_STR = "%(title)s - [%(channel)s]-%(resolution)s.%(ext)s";
-    protected static Pattern DOWNLOAD_PROGRESS_PATTERN = Pattern.compile("\\[download\\]\\s+([\\d\\.]+)\\% of ", Pattern.UNICODE_CHARACTER_CLASS);
+    private static Pattern DOWNLOAD_PROGRESS_PATTERN = Pattern.compile("\\[download\\]\\s+([\\d\\.]+)\\% of ", Pattern.UNICODE_CHARACTER_CLASS);
 
-    protected RunnableProcess proc;
-    protected boolean interrupted = false;
+    private RunnableProcess proc;
+    private boolean interrupted = false;
 
-    protected Consumer<RunnableProcess> processStartHandler = p -> {};
-    protected Consumer<String> processConsoleOutputHandler = line -> {};
-    protected Consumer<Float> downloadProgressValueHandler = value -> {};
-    protected Consumer<String> downloadProgressStringHandler = str -> {};
-    protected Runnable onCompleteHandler = () ->{};
-    protected Runnable onErrorHandler = () ->{};
-    protected Runnable onTerminationHandler = () ->{};
-
+    private Consumer<RunnableProcess> processStartHandler = p -> {};
+    private Consumer<String> processConsoleOutputHandler = line -> {};
+    private Consumer<Float> downloadProgressValueHandler = value -> {};
+    private Consumer<String> downloadProgressStringHandler = str -> {};
+    private Runnable onCompleteHandler = () ->{};
+    private Runnable onErrorHandler = () ->{};
+    private Runnable onTerminationHandler = () ->{};
+    private AtomicInteger attempt = new AtomicInteger(0);
 
     public VideoDownloader(){
 
@@ -77,34 +79,13 @@ public class VideoDownloader {
     }
 
     /**
-     * Simple video downloading method (not audio). For more options use {@link VideoDownloaderCommand}
-     * @param url
-     * @param downloaderExe downloader program executable
-     * @param outputDir output path with no slash ending
-     * @param quality video height
-     * @param compatibleFormat force most compatible file format. Usually h264(avc1)+aac(mp4a) in MP4 container
-     */
-    public void download(String url, String downloaderExe, String outputDir, String quality, boolean compatibleFormat){
-        String sourceFormatStr = VideoDownloaderSourceFormat
-            .getByHeight(Integer.parseUnsignedInt(quality))
-            .getFormatString(compatibleFormat);
-
-        List<String> cmd = new ArrayList<>();
-        cmd.add(downloaderExe);
-        cmd.add("-f");
-        cmd.add(sourceFormatStr);
-        cmd.add("-o");
-        cmd.add( getOutputFilesPattern(outputDir, "") );
-        cmd.add(url);
-        execute( cmd );
-    }
-
-    /**
      * Execute downloader with parameters. Use {@link VideoDownloaderCommand}
-     * @param commandList command line parts
+     * @param vdc
      */
-    public void execute(List<String> commandList){
+    public void execute(VideoDownloaderCommand vdc){
+        attempt.set(1);
         interrupted = false;
+        List<String> commandList = vdc.toList();
 
         proc = new RunnableProcess(commandList)
             .charset(Charset.defaultCharset())
@@ -113,11 +94,17 @@ public class VideoDownloader {
                 if (!interrupted){
                     if (p.exitValue()==0){
                         onCompleteHandler.run();
+                        onTerminationHandler.run();
                     }else{
-                        onErrorHandler.run();
+                        if (attempt.incrementAndGet() > vdc.getTaskRetries()) {
+                            onErrorHandler.run();
+                            onTerminationHandler.run();
+                        } else {
+                            proc.destroy();
+                            execute(vdc);
+                        }
                     }
                 }
-                onTerminationHandler.run();
             });
 
         new Thread(proc).start();

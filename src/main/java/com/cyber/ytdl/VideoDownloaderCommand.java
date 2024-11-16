@@ -46,8 +46,13 @@ public class VideoDownloaderCommand{
     private boolean compatibleFormat = false;
     private boolean playlistAllowed = false;
     private boolean subtitlesAllowed = false;
+    private boolean thumbnailAllowed = false;
     private boolean debug = false;
-    private int socketTimeout = 20;
+    private int socketTimeout = 10;
+    private int connectRetries = 10;
+    private int extractorRetries = 10;
+    private int taskRetries = 10;
+    private String proxyUrl = "";
 
     private LinkedHashMap<String,String> params;
 
@@ -74,8 +79,13 @@ public class VideoDownloaderCommand{
         sourceFormat = source.getSourceFormat();
         compatibleFormat = source.isCompatibleFormat();
         playlistAllowed = source.isPlaylistAllowed();
+        thumbnailAllowed = source.isThumbnailAllowed();
         debug = source.isDebug();
         socketTimeout = source.getSocketTimeout();
+        connectRetries = source.getConnectRetries();
+        extractorRetries = source.getExtractorRetries();
+        taskRetries = source.getTaskRetries();
+        proxyUrl = source.getProxyUrl();
 
         params.putAll(source.getParams());
     }
@@ -87,11 +97,18 @@ public class VideoDownloaderCommand{
         cmd.add(downloaderExe);
 
         // debug verbosity
-        if (debug) cmd.add("-v");
+        if (debug){
+            cmd.add("-v");
+        }
 
         // audio only params
         if (!sourceFormat.hasVideo()){
             cmd.add("-x");
+        }
+
+        // use proxy
+        if (!proxyUrl.isBlank()){
+            add("--proxy", getProxyUrl());
         }
 
         // get source format selection string
@@ -100,8 +117,17 @@ public class VideoDownloaderCommand{
         // output files pattern (with path)
         add("-o", VideoDownloader.getOutputFilesPattern(outputPath, fileNamesPattern));
 
-        if (socketTimeout>0)
+        if (socketTimeout>0) {
             add("--socket-timeout", String.valueOf(socketTimeout));
+        }
+
+        if (extractorRetries>0) {
+            add("--extractor-retries", String.valueOf(extractorRetries));
+        }
+
+        if (connectRetries>0) {
+            add("--retries", String.valueOf(connectRetries));
+        }
 
         if (playlistAllowed){
             add("--download-archive",
@@ -113,6 +139,10 @@ public class VideoDownloaderCommand{
         // get all subtitles
         if (subtitlesAllowed){
             add("--all-subs");
+        }
+
+        if (thumbnailAllowed){
+            add("--write-thumbnail --embed-thumbnail");
         }
 
         params.entrySet().stream()
@@ -136,6 +166,7 @@ public class VideoDownloaderCommand{
 
         if (compatibleFormat) sb.append("compatible format: true\n");
         if (playlistAllowed) sb.append("playlist allowed: true\n");
+        if (!proxyUrl.isBlank()) sb.append("proxy: ").append(proxyUrl).append("\n");
 
         if (debug){
             sb.append("debug mode: enabled\n");
@@ -232,12 +263,44 @@ public class VideoDownloaderCommand{
         this.playlistAllowed = playlistAllowed;
     }
 
+    public boolean isThumbnailAllowed() {
+        return thumbnailAllowed;
+    }
+
+    public void setThumbnailAllowed(boolean thumbnailAllowed) {
+        this.thumbnailAllowed = thumbnailAllowed;
+    }
+
     public int getSocketTimeout() {
         return socketTimeout;
     }
 
     public void setSocketTimeout(int socketTimeout) {
         this.socketTimeout = socketTimeout;
+    }
+
+    public int getConnectRetries() {
+        return connectRetries;
+    }
+
+    public void setConnectRetries(int retries) {
+        this.connectRetries = retries;
+    }
+
+    public int getExtractorRetries() {
+        return extractorRetries;
+    }
+
+    public void setExtractorRetries(int extractorRetries) {
+        this.extractorRetries = extractorRetries;
+    }
+
+    public int getTaskRetries() {
+        return taskRetries;
+    }
+
+    public void setTaskRetries(int taskRetries) {
+        this.taskRetries = taskRetries;
     }
 
     public boolean isDebug() {
@@ -260,5 +323,12 @@ public class VideoDownloaderCommand{
         return "files-" + Integer.toHexString(Objects.hash(archiveId)) + ".lst";
     }
 
+    public String getProxyUrl() {
+        return proxyUrl;
+    }
+
+    public void setProxyUrl(String proxyUrl) {
+        this.proxyUrl = proxyUrl;
+    }
 
 }

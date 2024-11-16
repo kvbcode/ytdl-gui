@@ -81,7 +81,7 @@ public class RunnableProcess implements Runnable{
                             doSleep = false;
                         }
 
-                        if (doSleep) Thread.sleep(1);
+                        if (doSleep) Thread.sleep(10);
                     }
                 }
             }

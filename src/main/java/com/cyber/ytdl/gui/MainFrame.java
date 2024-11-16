@@ -61,33 +61,34 @@ import javax.swing.ScrollPaneConstants;
 public class MainFrame extends BaseFrameWithProperties{
 
     // UI Components
-    protected JLabel urlLabel;
-    protected JLabel selectOutputLabel;
+    private JLabel urlLabel;
+    private JLabel selectOutputLabel;
 
-    protected JButton pasteButton;
-    protected JTextField urlTextField;
-    protected JComboBox<VideoDownloaderSourceFormat> qualityComboBox;
-    protected JComboBox<String> downloaderComboBox;
-    protected JComboBox<String> outputPathComboBox;
-    protected JButton downloadButton;
-    protected JButton browseOutputPathButton;
-    protected JCheckBox compatibilityCheckBox;
-    protected JCheckBox playlistAllowedCheckBox;
-    protected JCheckBox subtitlesAllowedCheckBox;
+    private JButton pasteButton;
+    private JTextField urlTextField;
+    private JComboBox<VideoDownloaderSourceFormat> qualityComboBox;
+    private JComboBox<String> downloaderComboBox;
+    private JComboBox<String> outputPathComboBox;
+    private JButton downloadButton;
+    private JButton browseOutputPathButton;
+    private JCheckBox compatibilityCheckBox;
+    private JCheckBox playlistAllowedCheckBox;
+    private JCheckBox subtitlesAllowedCheckBox;
 
-    protected JProgressBar progressBar;
+    private JProgressBar progressBar;
 
-    protected JTextArea processOutputText;
-    protected JScrollPane processOutputScrollPane;
+    private JTextArea processOutputText;
+    private JScrollPane processOutputScrollPane;
 
     // Properties
-    protected VideoDownloader downloader;
-    protected VideoDownloaderCommand defaultTask;
+    private VideoDownloader downloader;
+    private VideoDownloaderCommand defaultTask;
 
     // Const
-    protected static final int OUTPUT_PATH_LIST_LIMIT = 10;
-    protected static final String TITLE = "Youtube Downloader GUI";
-    protected static final String PROPERTIES_PREFIX = "frame.main";
+    private static final int OUTPUT_PATH_LIST_LIMIT = 20;
+    private static final String VERSION = "0.4.1";
+    private static final String TITLE = "Youtube Downloader GUI " + VERSION;
+    private static final String PROPERTIES_PREFIX = "frame.main";
 
 
     public MainFrame(ApplicationProperties properties) {
@@ -123,7 +124,7 @@ public class MainFrame extends BaseFrameWithProperties{
         outputPathComboBox = new JComboBox<>();
         outputPathComboBox.setEditable(true);
 
-        urlLabel = new JLabel("Enter your youtube link here:");
+        urlLabel = new JLabel("Download from URL:");
         urlTextField = new JTextField("");
         selectOutputLabel = new JLabel("Save to: ");
 
@@ -133,10 +134,10 @@ public class MainFrame extends BaseFrameWithProperties{
         Font buttonFont = downloadButton.getFont();
         downloadButton.setFont(new Font(buttonFont.getFontName(), Font.BOLD, (int)(buttonFont.getSize()*1.2)));
 
-        compatibilityCheckBox = new JCheckBox("Compatibility mode");
+        compatibilityCheckBox = new JCheckBox("Compatibility");
         compatibilityCheckBox.setToolTipText("Set compatibility file format for old devices: (avc+aac).mp4");
 
-        playlistAllowedCheckBox = new JCheckBox("Allow playlist");
+        playlistAllowedCheckBox = new JCheckBox("Playlist");
         playlistAllowedCheckBox.setToolTipText("Allow whole playlist downloading mode");
 
         subtitlesAllowedCheckBox = new JCheckBox("Subtitles");
@@ -214,9 +215,7 @@ public class MainFrame extends BaseFrameWithProperties{
         downloader.onComplete(() -> println("SUCCESSFULL COMPLETE"));
         downloader.onError(() -> JOptionPane.showMessageDialog( this,
             "<html><h2>Downloading error</h2>"
-            + "An error has occurred. Make sure there is enough disk space.<br>"
-            + "Please try downloading again later or select another subroutine<br>"
-            + "from the dropdown list. For example <i>yt-dlp</i> or <i>yt-dlp_x86</i>.",
+            + "An error has occurred. Please try downloading later<br>",
             "Downloading error", JOptionPane.ERROR_MESSAGE)
         );
 
@@ -325,7 +324,7 @@ public class MainFrame extends BaseFrameWithProperties{
 
         println(vdc.printInfo());
 
-        downloader.execute(vdc.toList());
+        downloader.execute(vdc);
         downloadButton.setText("Stop");
     }
 
@@ -365,22 +364,20 @@ public class MainFrame extends BaseFrameWithProperties{
         this.setSize( properties.getInt(prefix + ".width", getWidth()),
                       properties.getInt(prefix + ".height", getHeight()) );
 
-        defaultTask.setDebug( properties.getBool(prefix + ".debug",
-            defaultTask.isDebug()));
-        defaultTask.setQuality( properties.getProperty(prefix + ".quality",
-            defaultTask.getQuality()));
-        defaultTask.setDownloaderExe( properties.getProperty(prefix + ".downloader",
-            defaultTask.getDownloaderExe()));
-        defaultTask.setCompatibleFormat( properties.getBool(prefix + ".compatibility",
-            defaultTask.isCompatibleFormat()));
-        defaultTask.setPlaylistAllowed( properties.getBool(prefix + ".allow_playlist",
-            defaultTask.isPlaylistAllowed()));
-        defaultTask.setSubtitlesAllowed( properties.getBool(prefix + ".allow_subtitles",
-            defaultTask.isSubtitlesAllowed()));
-        defaultTask.setOutputPath( properties.getProperty(prefix + ".output_path",
-            defaultTask.getOutputPath()));
-        defaultTask.setFileNamesPattern( properties.getProperty(prefix + ".file_names_pattern",
-            defaultTask.getFileNamesPattern()));
+        defaultTask.setDebug( properties.getBool(prefix + ".debug", defaultTask.isDebug()));
+        defaultTask.setSocketTimeout( properties.getInt(prefix + ".socket_timeout", defaultTask.getSocketTimeout()));
+        defaultTask.setConnectRetries( properties.getInt(prefix + ".connect_retries", defaultTask.getConnectRetries()));
+        defaultTask.setExtractorRetries( properties.getInt(prefix + ".extractor_retries", defaultTask.getExtractorRetries()));
+        defaultTask.setTaskRetries( properties.getInt(prefix + ".task_retries", defaultTask.getTaskRetries()));
+        defaultTask.setQuality( properties.getProperty(prefix + ".quality", defaultTask.getQuality()));
+        defaultTask.setDownloaderExe( properties.getProperty(prefix + ".downloader", defaultTask.getDownloaderExe()));
+        defaultTask.setCompatibleFormat( properties.getBool(prefix + ".compatibility", defaultTask.isCompatibleFormat()));
+        defaultTask.setPlaylistAllowed( properties.getBool(prefix + ".allow_playlist", defaultTask.isPlaylistAllowed()));
+        defaultTask.setSubtitlesAllowed( properties.getBool(prefix + ".allow_subtitles", defaultTask.isSubtitlesAllowed()));
+        defaultTask.setThumbnailAllowed( properties.getBool(prefix + ".allow_thumbnails", defaultTask.isThumbnailAllowed()));
+        defaultTask.setOutputPath( properties.getProperty(prefix + ".output_path", defaultTask.getOutputPath()));
+        defaultTask.setFileNamesPattern( properties.getProperty(prefix + ".file_names_pattern", defaultTask.getFileNamesPattern()));
+        defaultTask.setProxyUrl( properties.getProperty( prefix + ".proxy", ""));
 
         qualityComboBox.setSelectedItem(defaultTask.getSourceFormat());
         downloaderComboBox.setSelectedItem(defaultTask.getDownloaderExe());
@@ -401,11 +398,17 @@ public class MainFrame extends BaseFrameWithProperties{
         properties.put(prefix + ".width", getWidth() );
         properties.put(prefix + ".height", getHeight() );
         properties.put(prefix + ".debug", defaultTask.isDebug());
+        properties.put(prefix + ".socket_timeout", defaultTask.getSocketTimeout());
+        properties.put(prefix + ".connect_retries", defaultTask.getConnectRetries());
+        properties.put(prefix + ".extractor_retries", defaultTask.getExtractorRetries());
+        properties.put(prefix + ".task_retries", defaultTask.getTaskRetries());
+        properties.put(prefix + ".proxy", defaultTask.getProxyUrl());
         properties.put(prefix + ".quality", qualityComboBox.getSelectedItem());
         properties.put(prefix + ".downloader", downloaderComboBox.getSelectedItem());
         properties.put(prefix + ".compatibility", compatibilityCheckBox.isSelected());
         properties.put(prefix + ".allow_playlist", playlistAllowedCheckBox.isSelected());
         properties.put(prefix + ".allow_subtitles", subtitlesAllowedCheckBox.isSelected());
+        properties.put(prefix + ".allow_thumbnails", defaultTask.isThumbnailAllowed());
         properties.put(prefix + ".file_names_pattern", defaultTask.getFileNamesPattern());
 
         properties.put(prefix + ".output_path", outputPathComboBox.getSelectedItem());
